@@ -29,6 +29,7 @@ enum TaskStatus {
   WAITING // 선행 과제 미완료
   READY // 진행 가능
   IN_PROGRESS
+  REVIEW // 완료 요청 후 승인 대기
   DONE
   SKIPPED
 }
@@ -106,6 +107,10 @@ model Task {
   description       String?
   status            TaskStatus     @default(WAITING)
   approval          ApprovalStatus @default(NONE)
+  approverType      String         @default("HOST_ADMIN") // HOST_ADMIN | COMPANY_ADMIN | NONE
+  reviewRequestedAt DateTime?
+  reviewedById      String?
+  reviewNote        String?
   assignedCompanyId String?
   assignedCompany   Company?       @relation("AssignedCompany", fields: [assignedCompanyId], references: [id])
   assigneeId        String?

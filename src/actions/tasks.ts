@@ -39,25 +39,142 @@ export async function startTask(formData: FormData) {
   revalidatePath(`/projects/${task.projectId}`);
 }
 
+/** 완료 승인 권한 확인 — 과제의 approverType 기준 */
+function canReview(
+  user: UserWithCompany,
+  task: { approverType: string; assignedCompanyId: string | null }
+) {
+  if (user.role === 'ADMIN') return true; // 주관사 관리자는 항상 가능
+  if (task.approverType === 'COMPANY_ADMIN') {
+    return user.role === 'COMPANY_ADMIN' && task.assignedCompanyId === user.companyId;
+  }
+  return false;
+}
+
+/** 완료 승인자에게 알림 */
+async function notifyReviewers(
+  task: { id: string; name: string; approverType: string; assignedCompanyId: string | null; projectId: string; project: { name: string } }
+) {
+  let reviewers: { id: string }[] = [];
+  if (task.approverType === 'COMPANY_ADMIN' && task.assignedCompanyId) {
+    reviewers = await prisma.user.findMany({
+      where: { companyId: task.assignedCompanyId, role: 'COMPANY_ADMIN', status: 'ACTIVE' },
+      select: { id: true },
+    });
+  }
+  if (reviewers.length === 0) {
+    reviewers = await prisma.user.findMany({
+      where: { role: 'ADMIN', status: 'ACTIVE' },
+      select: { id: true },
+    });
+  }
+  await notifyUsers(
+    reviewers.map((r) => r.id),
+    `완료 승인 요청: ${task.name} (${task.project.name})`,
+    taskPath(task)
+  );
+}
+
 export async function completeTask(formData: FormData) {
   const user = await requireUser();
   const task = await getTask(String(formData.get('taskId')));
   const approval = String(formData.get('approval') || ''); // '', 'APPROVED', 'REJECTED'
   if (!['READY', 'IN_PROGRESS'].includes(task.status)) return;
   if (!canWork(user, task)) return;
-  if (approval && user.role !== 'ADMIN') return; // 승인/반려는 주관사 관리자만
 
-  await prisma.task.update({
-    where: { id: task.id },
-    data: {
-      status: 'DONE',
-      completedAt: new Date(),
-      approval: approval === 'APPROVED' || approval === 'REJECTED' ? approval : 'NONE',
-    },
-  });
-  await advanceProject(task.projectId);
+  // 분기 결정 과제(XOR 승인/반려)는 주관사 관리자의 결정이 곧 완료
+  if (approval) {
+    if (user.role !== 'ADMIN') return;
+    await prisma.task.update({
+      where: { id: task.id },
+      data: {
+        status: 'DONE',
+        completedAt: new Date(),
+        approval: approval === 'APPROVED' || approval === 'REJECTED' ? approval : 'NONE',
+        reviewedById: user.id,
+      },
+    });
+    await advanceProject(task.projectId);
+    revalidatePath(taskPath(task));
+    revalidatePath(`/projects/${task.projectId}`);
+    return;
+  }
+
+  // 승인 불필요 과제는 즉시 완료
+  if (task.approverType === 'NONE') {
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { status: 'DONE', completedAt: new Date() },
+    });
+    await advanceProject(task.projectId);
+  } else {
+    // 완료 요청 → 승인 대기 상태로 전환, 승인자에게 알림
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { status: 'REVIEW', reviewRequestedAt: new Date(), reviewNote: null },
+    });
+    await notifyReviewers(task);
+  }
   revalidatePath(taskPath(task));
   revalidatePath(`/projects/${task.projectId}`);
+}
+
+/** 완료 승인/반려 — 상위 결정권자의 게이트 */
+export async function reviewTask(formData: FormData) {
+  const user = await requireUser();
+  const task = await getTask(String(formData.get('taskId')));
+  const decision = String(formData.get('decision') || '');
+  const note = String(formData.get('note') || '').trim() || null;
+  if (task.status !== 'REVIEW') return;
+  if (!canReview(user, task)) return;
+
+  if (decision === 'APPROVED') {
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { status: 'DONE', completedAt: new Date(), reviewedById: user.id, reviewNote: note },
+    });
+    await advanceProject(task.projectId);
+  } else if (decision === 'REJECTED') {
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { status: 'IN_PROGRESS', reviewedById: user.id, reviewNote: note },
+    });
+  } else {
+    return;
+  }
+
+  // 담당자·담당 업체에 결과 알림
+  const targets = new Set<string>();
+  if (task.assigneeId) targets.add(task.assigneeId);
+  if (task.assignedCompanyId) {
+    const users = await prisma.user.findMany({
+      where: { companyId: task.assignedCompanyId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    users.forEach((u) => targets.add(u.id));
+  }
+  targets.delete(user.id);
+  await notifyUsers(
+    Array.from(targets),
+    decision === 'APPROVED'
+      ? `완료 승인됨: ${task.name} (${task.project.name})`
+      : `완료 반려됨(재작업): ${task.name} (${task.project.name})${note ? ` — ${note}` : ''}`,
+    taskPath(task)
+  );
+
+  revalidatePath(taskPath(task));
+  revalidatePath(`/projects/${task.projectId}`);
+}
+
+/** 과제별 완료 승인자 변경 (주관사 관리자만) */
+export async function setApproverType(formData: FormData) {
+  const user = await requireUser();
+  if (user.role !== 'ADMIN') return;
+  const task = await getTask(String(formData.get('taskId')));
+  const approverType = String(formData.get('approverType') || '');
+  if (!['HOST_ADMIN', 'COMPANY_ADMIN', 'NONE'].includes(approverType)) return;
+  await prisma.task.update({ where: { id: task.id }, data: { approverType } });
+  revalidatePath(taskPath(task));
 }
 
 export async function reopenTask(formData: FormData) {

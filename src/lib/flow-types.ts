@@ -5,6 +5,7 @@ export type FlowNode = {
   taskType?: string;
   description?: string;
   durationDays?: number;
+  approverType?: string; // HOST_ADMIN | COMPANY_ADMIN | NONE
   position: { x: number; y: number };
 };
 
@@ -13,6 +14,12 @@ export type FlowEdge = {
   source: string;
   target: string;
   condition?: string;
+};
+
+export const APPROVER_TYPE_LABELS: Record<string, string> = {
+  HOST_ADMIN: '주관사 관리자',
+  COMPANY_ADMIN: '담당 업체 회사 관리자',
+  NONE: '승인 불필요',
 };
 
 export const NODE_TYPE_LABELS: Record<string, string> = {

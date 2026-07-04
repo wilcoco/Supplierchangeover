@@ -43,6 +43,7 @@ export async function createProject(formData: FormData) {
             type: n.type,
             taskType: n.taskType ?? null,
             description: n.description ?? null,
+            approverType: n.approverType ?? 'HOST_ADMIN',
             status: n.type === 'start' ? 'DONE' : 'WAITING',
             completedAt: n.type === 'start' ? new Date() : null,
             plannedStart: sched?.plannedStart ?? null,

@@ -22,6 +22,7 @@ type NodeData = {
   nodeType: FlowNode['type'];
   description: string;
   durationDays: number;
+  approverType: string;
 };
 
 const TYPE_STYLES: Record<string, React.CSSProperties> = {
@@ -77,6 +78,7 @@ export function FlowEditor({
           nodeType: n.type,
           description: n.description ?? '',
           durationDays: n.durationDays ?? (n.type === 'task' ? 5 : 0),
+          approverType: n.approverType ?? 'HOST_ADMIN',
         },
         style: nodeStyle(n.type),
       })),
@@ -135,6 +137,7 @@ export function FlowEditor({
           nodeType: type,
           description: '',
           durationDays: type === 'task' ? 5 : 0,
+          approverType: 'HOST_ADMIN',
         },
         style: nodeStyle(type),
       },
@@ -188,6 +191,7 @@ export function FlowEditor({
         taskType: n.data.nodeType === 'task' ? 'WORKLOG' : undefined,
         description: n.data.description || undefined,
         durationDays: n.data.nodeType === 'task' ? n.data.durationDays : undefined,
+        approverType: n.data.nodeType === 'task' ? n.data.approverType : undefined,
         position: n.position,
       }));
       const outEdges: FlowEdge[] = edges.map((e) => ({
@@ -358,6 +362,18 @@ export function FlowEditor({
                       onChange={(e) => patchSelNode({ durationDays: Number(e.target.value) })}
                       disabled={readOnly}
                     />
+                  </label>
+                  <label className="fld">
+                    <span className="lbl">완료 승인자 (업무 완료 시 승인 게이트)</span>
+                    <select
+                      value={selNode.data.approverType}
+                      onChange={(e) => patchSelNode({ approverType: e.target.value })}
+                      disabled={readOnly}
+                    >
+                      <option value="HOST_ADMIN">주관사 관리자</option>
+                      <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
+                      <option value="NONE">승인 불필요 (즉시 완료)</option>
+                    </select>
                   </label>
                 </>
               )}

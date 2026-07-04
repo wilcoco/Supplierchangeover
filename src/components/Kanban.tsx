@@ -11,7 +11,7 @@ type KanbanTask = {
   assignee: { name: string } | null;
 };
 
-const COLUMNS = ['WAITING', 'READY', 'IN_PROGRESS', 'DONE'] as const;
+const COLUMNS = ['WAITING', 'READY', 'IN_PROGRESS', 'REVIEW', 'DONE'] as const;
 
 export function Kanban({ tasks }: { tasks: KanbanTask[] }) {
   return (

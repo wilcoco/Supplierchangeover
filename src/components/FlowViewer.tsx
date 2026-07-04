@@ -10,6 +10,7 @@ const STATUS_COLORS: Record<string, { border: string; bg: string }> = {
   WAITING: { border: '#94a3b8', bg: '#f8fafc' },
   READY: { border: '#3b82f6', bg: '#eff6ff' },
   IN_PROGRESS: { border: '#f59e0b', bg: '#fffbeb' },
+  REVIEW: { border: '#a855f7', bg: '#faf5ff' },
   DONE: { border: '#22c55e', bg: '#f0fdf4' },
   SKIPPED: { border: '#cbd5e1', bg: '#f8fafc' },
 };

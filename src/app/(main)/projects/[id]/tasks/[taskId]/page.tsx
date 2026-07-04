@@ -6,15 +6,17 @@ import { isApprovalNode } from '@/lib/engine';
 import {
   startTask,
   completeTask,
+  reviewTask,
   reopenTask,
   assignCompany,
   assignUser,
   updateTaskDates,
+  setApproverType,
 } from '@/actions/tasks';
 import { addWorklog, addComment } from '@/actions/worklogs';
 import { fmtDate, fmtDateTime, isOverdue } from '@/lib/format';
 import { StatusBadge } from '@/components/StatusBadge';
-import type { FlowEdge } from '@/lib/flow-types';
+import { APPROVER_TYPE_LABELS, type FlowEdge } from '@/lib/flow-types';
 
 function toInputDate(d: Date | null): string {
   if (!d) return '';
@@ -49,6 +51,11 @@ export default async function TaskDetailPage({
   const approvalTask = isApprovalNode(task.nodeId, edges);
   const isAdmin = user.role === 'ADMIN';
   const canWork = isAdmin || !task.assignedCompanyId || task.assignedCompanyId === user.companyId;
+  const canReview =
+    isAdmin ||
+    (task.approverType === 'COMPANY_ADMIN' &&
+      user.role === 'COMPANY_ADMIN' &&
+      task.assignedCompanyId === user.companyId);
   const canAssignUser =
     isAdmin || (user.role === 'COMPANY_ADMIN' && task.assignedCompanyId === user.companyId);
   const projectActive = task.project.status === 'ACTIVE';
@@ -103,7 +110,7 @@ export default async function TaskDetailPage({
               <form action={completeTask}>
                 <input type="hidden" name="taskId" value={task.id} />
                 <button className="btn success" type="submit">
-                  완료 처리
+                  {task.approverType === 'NONE' ? '완료 처리' : '완료 요청 (승인 상신)'}
                 </button>
               </form>
             )}
@@ -139,6 +146,39 @@ export default async function TaskDetailPage({
 
       {approvalTask && ['READY', 'IN_PROGRESS'].includes(task.status) && !isAdmin && (
         <div className="alert info">이 과제는 주관사 관리자의 승인/반려로 완료됩니다.</div>
+      )}
+
+      {task.status === 'REVIEW' && (
+        <div className="card" style={{ borderColor: '#c084fc', background: '#faf5ff' }}>
+          <h2>완료 승인 대기</h2>
+          <div className="muted" style={{ marginBottom: 10 }}>
+            {fmtDateTime(task.reviewRequestedAt)} 완료 요청됨 · 승인자:{' '}
+            {APPROVER_TYPE_LABELS[task.approverType] ?? task.approverType}
+          </div>
+          {projectActive && canReview ? (
+            <form action={reviewTask}>
+              <input type="hidden" name="taskId" value={task.id} />
+              <label className="fld">
+                <span className="lbl">검토 의견 (선택 — 반려 시 사유 권장)</span>
+                <input type="text" name="note" placeholder="예: 재고 수량 재확인 필요" />
+              </label>
+              <div className="row">
+                <button className="btn success" type="submit" name="decision" value="APPROVED">
+                  ✔ 완료 승인
+                </button>
+                <button className="btn danger" type="submit" name="decision" value="REJECTED">
+                  ✖ 반려 (재작업)
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="muted">상위 결정권자의 승인을 기다리고 있습니다.</div>
+          )}
+        </div>
+      )}
+
+      {task.status === 'IN_PROGRESS' && task.reviewNote && (
+        <div className="alert error">반려 사유: {task.reviewNote}</div>
       )}
 
       <div className="grid-2">
@@ -195,6 +235,28 @@ export default async function TaskDetailPage({
                     </form>
                   ) : (
                     task.assignee?.name ?? <span className="muted">미지정</span>
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <th>완료 승인자</th>
+                <td>
+                  {isAdmin && projectActive && !approvalTask ? (
+                    <form action={setApproverType} className="row">
+                      <input type="hidden" name="taskId" value={task.id} />
+                      <select name="approverType" defaultValue={task.approverType} style={{ flex: 1 }}>
+                        <option value="HOST_ADMIN">주관사 관리자</option>
+                        <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
+                        <option value="NONE">승인 불필요 (즉시 완료)</option>
+                      </select>
+                      <button className="btn sm secondary" type="submit">
+                        변경
+                      </button>
+                    </form>
+                  ) : approvalTask ? (
+                    <span className="muted">분기 결정 과제 — 주관사 관리자 승인/반려</span>
+                  ) : (
+                    APPROVER_TYPE_LABELS[task.approverType] ?? task.approverType
                   )}
                 </td>
               </tr>

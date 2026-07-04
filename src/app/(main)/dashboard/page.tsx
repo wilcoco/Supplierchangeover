@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const [myTasks, projects, pendingUsers, pendingCompanies, notifications] = await Promise.all([
+  const [myTasks, reviewTasks, projects, pendingUsers, pendingCompanies, notifications] = await Promise.all([
     prisma.task.findMany({
       where: {
         type: 'task',
@@ -19,6 +19,27 @@ export default async function DashboardPage() {
       orderBy: { plannedEnd: 'asc' },
       take: 15,
     }),
+    // 내가 완료 승인해야 하는 과제
+    user.role === 'ADMIN'
+      ? prisma.task.findMany({
+          where: { status: 'REVIEW', project: { status: 'ACTIVE' } },
+          include: { project: true, assignedCompany: true },
+          orderBy: { reviewRequestedAt: 'asc' },
+          take: 15,
+        })
+      : user.role === 'COMPANY_ADMIN'
+        ? prisma.task.findMany({
+            where: {
+              status: 'REVIEW',
+              approverType: 'COMPANY_ADMIN',
+              assignedCompanyId: user.companyId,
+              project: { status: 'ACTIVE' },
+            },
+            include: { project: true, assignedCompany: true },
+            orderBy: { reviewRequestedAt: 'asc' },
+            take: 15,
+          })
+        : Promise.resolve([]),
     prisma.project.findMany({
       orderBy: { createdAt: 'desc' },
       take: 8,
@@ -48,6 +69,34 @@ export default async function DashboardPage() {
         <div className="alert info">
           승인 대기 — 회사 {pendingCompanies}건, 사용자 {pendingUsers}건이 있습니다.{' '}
           <Link href="/admin">관리 화면으로 이동</Link>
+        </div>
+      )}
+
+      {reviewTasks.length > 0 && (
+        <div className="card" style={{ borderColor: '#c084fc' }}>
+          <h2>완료 승인 대기 — 내 결재 차례 ({reviewTasks.length})</h2>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>과제</th>
+                <th>프로젝트</th>
+                <th>담당 업체</th>
+                <th>요청 시각</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reviewTasks.map((t) => (
+                <tr key={t.id}>
+                  <td>
+                    <Link href={`/projects/${t.projectId}/tasks/${t.id}`}>{t.name}</Link>
+                  </td>
+                  <td className="muted">{t.project.name}</td>
+                  <td>{t.assignedCompany?.name ?? '-'}</td>
+                  <td className="muted">{fmtDate(t.reviewRequestedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

@@ -2,6 +2,7 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
   WAITING: '대기',
   READY: '진행 가능',
   IN_PROGRESS: '진행 중',
+  REVIEW: '승인 대기',
   DONE: '완료',
   SKIPPED: '건너뜀',
 };
@@ -10,6 +11,7 @@ export const TASK_STATUS_COLORS: Record<string, string> = {
   WAITING: '#94a3b8',
   READY: '#3b82f6',
   IN_PROGRESS: '#f59e0b',
+  REVIEW: '#a855f7',
   DONE: '#22c55e',
   SKIPPED: '#cbd5e1',
 };
