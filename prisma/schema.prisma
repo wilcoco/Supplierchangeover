@@ -48,6 +48,7 @@ model Company {
   createdAt DateTime      @default(now())
   users     User[]
   tasks     Task[]        @relation("AssignedCompany")
+  approverTasks Task[]    @relation("ApproverCompany")
 }
 
 model User {
@@ -65,6 +66,7 @@ model User {
   comments      Comment[]
   notifications Notification[]
   assignedTasks Task[]        @relation("Assignee")
+  approverTasks Task[]        @relation("ApproverUser")
 }
 
 model ProcessTemplate {
@@ -107,7 +109,11 @@ model Task {
   description       String?
   status            TaskStatus     @default(WAITING)
   approval          ApprovalStatus @default(NONE)
-  approverType      String         @default("HOST_ADMIN") // HOST_ADMIN | COMPANY_ADMIN | NONE
+  approverType      String         @default("HOST_ADMIN") // HOST_ADMIN | COMPANY_ADMIN | COMPANY | USER | NONE
+  approverCompanyId String? // approverType=COMPANY 일 때 지정 회사
+  approverCompany   Company?       @relation("ApproverCompany", fields: [approverCompanyId], references: [id])
+  approverUserId    String? // approverType=USER 일 때 지정 사용자
+  approverUser      User?          @relation("ApproverUser", fields: [approverUserId], references: [id])
   reviewRequestedAt DateTime?
   reviewedById      String?
   reviewNote        String?

@@ -39,28 +39,53 @@ export async function startTask(formData: FormData) {
   revalidatePath(`/projects/${task.projectId}`);
 }
 
-/** 완료 승인 권한 확인 — 과제의 approverType 기준 */
+/** 완료 승인 권한 확인 — 승인자는 회사에 관계없이 지정 가능 */
 function canReview(
   user: UserWithCompany,
-  task: { approverType: string; assignedCompanyId: string | null }
+  task: {
+    approverType: string;
+    assignedCompanyId: string | null;
+    approverCompanyId: string | null;
+    approverUserId: string | null;
+  }
 ) {
   if (user.role === 'ADMIN') return true; // 주관사 관리자는 항상 가능
-  if (task.approverType === 'COMPANY_ADMIN') {
-    return user.role === 'COMPANY_ADMIN' && task.assignedCompanyId === user.companyId;
+  switch (task.approverType) {
+    case 'COMPANY_ADMIN': // 담당 업체의 회사 관리자
+      return user.role === 'COMPANY_ADMIN' && task.assignedCompanyId === user.companyId;
+    case 'COMPANY': // 지정 회사의 회사 관리자 (담당 업체와 다른 회사 가능)
+      return user.role === 'COMPANY_ADMIN' && task.approverCompanyId === user.companyId;
+    case 'USER': // 지정 사용자 (소속 회사 무관)
+      return task.approverUserId === user.id;
+    default:
+      return false;
   }
-  return false;
 }
 
 /** 완료 승인자에게 알림 */
-async function notifyReviewers(
-  task: { id: string; name: string; approverType: string; assignedCompanyId: string | null; projectId: string; project: { name: string } }
-) {
+async function notifyReviewers(task: {
+  id: string;
+  name: string;
+  approverType: string;
+  assignedCompanyId: string | null;
+  approverCompanyId: string | null;
+  approverUserId: string | null;
+  projectId: string;
+  project: { name: string };
+}) {
   let reviewers: { id: string }[] = [];
   if (task.approverType === 'COMPANY_ADMIN' && task.assignedCompanyId) {
     reviewers = await prisma.user.findMany({
       where: { companyId: task.assignedCompanyId, role: 'COMPANY_ADMIN', status: 'ACTIVE' },
       select: { id: true },
     });
+  } else if (task.approverType === 'COMPANY' && task.approverCompanyId) {
+    reviewers = await prisma.user.findMany({
+      where: { companyId: task.approverCompanyId, role: 'COMPANY_ADMIN', status: 'ACTIVE' },
+      select: { id: true },
+    });
+  } else if (task.approverType === 'USER' && task.approverUserId) {
+    reviewers = [{ id: task.approverUserId }];
   }
   if (reviewers.length === 0) {
     reviewers = await prisma.user.findMany({
@@ -166,14 +191,25 @@ export async function reviewTask(formData: FormData) {
   revalidatePath(`/projects/${task.projectId}`);
 }
 
-/** 과제별 완료 승인자 변경 (주관사 관리자만) */
+/** 과제별 완료 승인자 변경 (주관사 관리자만) — 회사·사용자 교차 지정 가능 */
 export async function setApproverType(formData: FormData) {
   const user = await requireUser();
   if (user.role !== 'ADMIN') return;
   const task = await getTask(String(formData.get('taskId')));
   const approverType = String(formData.get('approverType') || '');
-  if (!['HOST_ADMIN', 'COMPANY_ADMIN', 'NONE'].includes(approverType)) return;
-  await prisma.task.update({ where: { id: task.id }, data: { approverType } });
+  const approverCompanyId = String(formData.get('approverCompanyId') || '') || null;
+  const approverUserId = String(formData.get('approverUserId') || '') || null;
+  if (!['HOST_ADMIN', 'COMPANY_ADMIN', 'COMPANY', 'USER', 'NONE'].includes(approverType)) return;
+  if (approverType === 'COMPANY' && !approverCompanyId) return;
+  if (approverType === 'USER' && !approverUserId) return;
+  await prisma.task.update({
+    where: { id: task.id },
+    data: {
+      approverType,
+      approverCompanyId: approverType === 'COMPANY' ? approverCompanyId : null,
+      approverUserId: approverType === 'USER' ? approverUserId : null,
+    },
+  });
   revalidatePath(taskPath(task));
 }
 

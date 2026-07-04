@@ -35,6 +35,8 @@ export default async function TaskDetailPage({
       project: true,
       assignedCompany: true,
       assignee: true,
+      approverCompany: true,
+      approverUser: { include: { company: true } },
       worklogs: {
         include: { author: { include: { company: true } }, attachments: true },
         orderBy: { createdAt: 'desc' },
@@ -55,12 +57,27 @@ export default async function TaskDetailPage({
     isAdmin ||
     (task.approverType === 'COMPANY_ADMIN' &&
       user.role === 'COMPANY_ADMIN' &&
-      task.assignedCompanyId === user.companyId);
+      task.assignedCompanyId === user.companyId) ||
+    (task.approverType === 'COMPANY' &&
+      user.role === 'COMPANY_ADMIN' &&
+      task.approverCompanyId === user.companyId) ||
+    (task.approverType === 'USER' && task.approverUserId === user.id);
+
+  const approverLabel =
+    task.approverType === 'HOST_ADMIN'
+      ? '주관사 관리자'
+      : task.approverType === 'COMPANY_ADMIN'
+        ? `담당 업체 회사 관리자${task.assignedCompany ? ` (${task.assignedCompany.name})` : ''}`
+        : task.approverType === 'COMPANY'
+          ? `지정 회사 관리자 — ${task.approverCompany?.name ?? '미지정'}`
+          : task.approverType === 'USER'
+            ? `지정 사용자 — ${task.approverUser ? `${task.approverUser.name} (${task.approverUser.company.name})` : '미지정'}`
+            : '승인 불필요';
   const canAssignUser =
     isAdmin || (user.role === 'COMPANY_ADMIN' && task.assignedCompanyId === user.companyId);
   const projectActive = task.project.status === 'ACTIVE';
 
-  const [companies, companyUsers] = await Promise.all([
+  const [companies, companyUsers, allUsers] = await Promise.all([
     isAdmin
       ? prisma.company.findMany({ where: { status: 'ACTIVE' }, orderBy: { name: 'asc' } })
       : Promise.resolve([]),
@@ -68,6 +85,13 @@ export default async function TaskDetailPage({
       ? prisma.user.findMany({
           where: { companyId: task.assignedCompanyId, status: 'ACTIVE' },
           orderBy: { name: 'asc' },
+        })
+      : Promise.resolve([]),
+    isAdmin
+      ? prisma.user.findMany({
+          where: { status: 'ACTIVE' },
+          include: { company: true },
+          orderBy: [{ companyId: 'asc' }, { name: 'asc' }],
         })
       : Promise.resolve([]),
   ]);
@@ -152,8 +176,7 @@ export default async function TaskDetailPage({
         <div className="card" style={{ borderColor: '#c084fc', background: '#faf5ff' }}>
           <h2>완료 승인 대기</h2>
           <div className="muted" style={{ marginBottom: 10 }}>
-            {fmtDateTime(task.reviewRequestedAt)} 완료 요청됨 · 승인자:{' '}
-            {APPROVER_TYPE_LABELS[task.approverType] ?? task.approverType}
+            {fmtDateTime(task.reviewRequestedAt)} 완료 요청됨 · 승인자: {approverLabel}
           </div>
           {projectActive && canReview ? (
             <form action={reviewTask}>
@@ -242,21 +265,55 @@ export default async function TaskDetailPage({
                 <th>완료 승인자</th>
                 <td>
                   {isAdmin && projectActive && !approvalTask ? (
-                    <form action={setApproverType} className="row">
+                    <form action={setApproverType}>
                       <input type="hidden" name="taskId" value={task.id} />
-                      <select name="approverType" defaultValue={task.approverType} style={{ flex: 1 }}>
-                        <option value="HOST_ADMIN">주관사 관리자</option>
-                        <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
-                        <option value="NONE">승인 불필요 (즉시 완료)</option>
-                      </select>
-                      <button className="btn sm secondary" type="submit">
-                        변경
-                      </button>
+                      <div className="row" style={{ marginBottom: 6 }}>
+                        <select name="approverType" defaultValue={task.approverType} style={{ flex: 1 }}>
+                          <option value="HOST_ADMIN">주관사 관리자</option>
+                          <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
+                          <option value="COMPANY">지정 회사 관리자 (교차 승인)</option>
+                          <option value="USER">지정 사용자 (교차 승인)</option>
+                          <option value="NONE">승인 불필요 (즉시 완료)</option>
+                        </select>
+                        <button className="btn sm secondary" type="submit">
+                          변경
+                        </button>
+                      </div>
+                      <div className="row">
+                        <select
+                          name="approverCompanyId"
+                          defaultValue={task.approverCompanyId ?? ''}
+                          style={{ flex: 1 }}
+                        >
+                          <option value="">(지정 회사 선택 시)</option>
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                              {c.isHost ? ' (주관사)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          name="approverUserId"
+                          defaultValue={task.approverUserId ?? ''}
+                          style={{ flex: 1 }}
+                        >
+                          <option value="">(지정 사용자 선택 시)</option>
+                          {allUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name} — {u.company.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="muted mt8">
+                        현재: {approverLabel} · 승인자는 회사에 관계없이 지정할 수 있습니다.
+                      </div>
                     </form>
                   ) : approvalTask ? (
                     <span className="muted">분기 결정 과제 — 주관사 관리자 승인/반려</span>
                   ) : (
-                    APPROVER_TYPE_LABELS[task.approverType] ?? task.approverType
+                    approverLabel
                   )}
                 </td>
               </tr>

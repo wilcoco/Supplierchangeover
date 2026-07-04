@@ -374,6 +374,10 @@ export function FlowEditor({
                       <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
                       <option value="NONE">승인 불필요 (즉시 완료)</option>
                     </select>
+                    <span className="muted">
+                      특정 회사·사용자를 승인자로 지정(교차 승인)하는 것은 프로젝트 생성 후 과제
+                      화면에서 설정합니다.
+                    </span>
                   </label>
                 </>
               )}

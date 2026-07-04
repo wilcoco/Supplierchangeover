@@ -19,7 +19,7 @@ export default async function DashboardPage() {
       orderBy: { plannedEnd: 'asc' },
       take: 15,
     }),
-    // 내가 완료 승인해야 하는 과제
+    // 내가 완료 승인해야 하는 과제 (승인자는 회사를 넘나들며 지정될 수 있음)
     user.role === 'ADMIN'
       ? prisma.task.findMany({
           where: { status: 'REVIEW', project: { status: 'ACTIVE' } },
@@ -27,19 +27,26 @@ export default async function DashboardPage() {
           orderBy: { reviewRequestedAt: 'asc' },
           take: 15,
         })
-      : user.role === 'COMPANY_ADMIN'
-        ? prisma.task.findMany({
-            where: {
-              status: 'REVIEW',
-              approverType: 'COMPANY_ADMIN',
-              assignedCompanyId: user.companyId,
-              project: { status: 'ACTIVE' },
-            },
-            include: { project: true, assignedCompany: true },
-            orderBy: { reviewRequestedAt: 'asc' },
-            take: 15,
-          })
-        : Promise.resolve([]),
+      : prisma.task.findMany({
+          where: {
+            status: 'REVIEW',
+            project: { status: 'ACTIVE' },
+            OR: [
+              // 나를 지정 사용자로 둔 과제
+              { approverType: 'USER', approverUserId: user.id },
+              // 회사 관리자라면: 담당 업체 승인 or 지정 회사 승인
+              ...(user.role === 'COMPANY_ADMIN'
+                ? [
+                    { approverType: 'COMPANY_ADMIN', assignedCompanyId: user.companyId },
+                    { approverType: 'COMPANY', approverCompanyId: user.companyId },
+                  ]
+                : []),
+            ],
+          },
+          include: { project: true, assignedCompany: true },
+          orderBy: { reviewRequestedAt: 'asc' },
+          take: 15,
+        }),
     prisma.project.findMany({
       orderBy: { createdAt: 'desc' },
       take: 8,
