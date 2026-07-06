@@ -7,6 +7,7 @@ type KanbanTask = {
   name: string;
   status: string;
   plannedEnd: Date | null;
+  assignedTeam: string | null;
   assignedCompany: { name: string } | null;
   assignee: { name: string } | null;
 };
@@ -30,6 +31,7 @@ export function Kanban({ tasks }: { tasks: KanbanTask[] }) {
                 </div>
                 <div className="meta">
                   {t.assignedCompany?.name ?? '미배정'}
+                  {t.assignedTeam ? ` · ${t.assignedTeam}` : ''}
                   {t.assignee ? ` · ${t.assignee.name}` : ''}
                   {t.plannedEnd ? ` · ~${fmtDate(t.plannedEnd)}` : ''}
                 </div>

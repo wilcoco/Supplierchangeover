@@ -9,10 +9,10 @@ import {
   reviewTask,
   reopenTask,
   assignCompany,
-  assignUser,
   updateTaskDates,
   setApproverType,
 } from '@/actions/tasks';
+import { AssigneeSelector } from '@/components/AssigneeSelector';
 import { addWorklog, addComment } from '@/actions/worklogs';
 import { fmtDate, fmtDateTime, isOverdue } from '@/lib/format';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -239,25 +239,31 @@ export default async function TaskDetailPage({
                 </td>
               </tr>
               <tr>
-                <th>담당자</th>
+                <th>담당 팀 / 담당자</th>
                 <td>
                   {canAssignUser && projectActive && task.assignedCompanyId ? (
-                    <form action={assignUser} className="row">
-                      <input type="hidden" name="taskId" value={task.id} />
-                      <select name="assigneeId" defaultValue={task.assigneeId ?? ''} style={{ flex: 1 }}>
-                        <option value="">미지정</option>
-                        {companyUsers.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name} ({u.loginId})
-                          </option>
-                        ))}
-                      </select>
-                      <button className="btn sm secondary" type="submit">
-                        지정
-                      </button>
-                    </form>
+                    <AssigneeSelector
+                      taskId={task.id}
+                      users={companyUsers.map((u) => ({
+                        id: u.id,
+                        name: u.name,
+                        loginId: u.loginId,
+                        team: u.team,
+                      }))}
+                      teams={Array.from(
+                        new Set([
+                          ...(task.assignedCompany?.teams ?? []),
+                          ...companyUsers.map((u) => u.team).filter((t): t is string => !!t),
+                        ])
+                      )}
+                      currentTeam={task.assignedTeam}
+                      currentAssigneeId={task.assigneeId}
+                    />
                   ) : (
-                    task.assignee?.name ?? <span className="muted">미지정</span>
+                    <span>
+                      {task.assignedTeam && <span className="badge gray">{task.assignedTeam}</span>}{' '}
+                      {task.assignee?.name ?? <span className="muted">미지정</span>}
+                    </span>
                   )}
                 </td>
               </tr>

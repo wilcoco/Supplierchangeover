@@ -15,6 +15,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [email, setEmail] = useState('');
+  const [team, setTeam] = useState('');
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,6 +55,7 @@ export default function SignupPage() {
           password,
           name,
           email,
+          team,
           companyId: mode === 'existing' ? companyId : '',
           newCompanyName: mode === 'new' ? newCompanyName : '',
         }),
@@ -159,6 +161,15 @@ export default function SignupPage() {
               value={password2}
               onChange={(e) => setPassword2(e.target.value)}
               required
+            />
+          </label>
+          <label className="fld">
+            <span className="lbl">소속 팀 (선택)</span>
+            <input
+              type="text"
+              value={team}
+              onChange={(e) => setTeam(e.target.value)}
+              placeholder="예: 영업관리팀"
             />
           </label>
           <label className="fld">

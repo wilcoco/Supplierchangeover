@@ -254,6 +254,7 @@ export async function assignUser(formData: FormData) {
   const user = await requireUser();
   const task = await getTask(String(formData.get('taskId')));
   const assigneeId = String(formData.get('assigneeId') || '') || null;
+  const assignedTeam = String(formData.get('team') || '').trim() || null;
   // 주관사 관리자 또는 배정된 회사의 회사 관리자만
   const allowed =
     user.role === 'ADMIN' ||
@@ -264,7 +265,7 @@ export async function assignUser(formData: FormData) {
     if (!assignee || (task.assignedCompanyId && assignee.companyId !== task.assignedCompanyId))
       return;
   }
-  await prisma.task.update({ where: { id: task.id }, data: { assigneeId } });
+  await prisma.task.update({ where: { id: task.id }, data: { assigneeId, assignedTeam } });
   if (assigneeId) {
     await notifyUsers([assigneeId], `담당자 지정: ${task.name} (${task.project.name})`, taskPath(task));
   }

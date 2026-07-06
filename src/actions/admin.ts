@@ -54,6 +54,27 @@ export async function setUserRole(formData: FormData) {
   revalidatePath('/admin');
 }
 
+/** 회사 팀 목록 설정 (쉼표 구분) */
+export async function setCompanyTeams(formData: FormData) {
+  await requireAdmin();
+  const companyId = String(formData.get('companyId'));
+  const teams = String(formData.get('teams') || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  await prisma.company.update({ where: { id: companyId }, data: { teams } });
+  revalidatePath('/admin');
+}
+
+/** 사용자 소속 팀 지정 */
+export async function setUserTeam(formData: FormData) {
+  await requireAdmin();
+  const userId = String(formData.get('userId'));
+  const team = String(formData.get('team') || '').trim() || null;
+  await prisma.user.update({ where: { id: userId }, data: { team } });
+  revalidatePath('/admin');
+}
+
 export async function resetPassword(formData: FormData) {
   await requireAdmin();
   const userId = String(formData.get('userId'));

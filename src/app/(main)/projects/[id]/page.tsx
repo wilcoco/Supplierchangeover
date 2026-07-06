@@ -122,7 +122,10 @@ export default async function ProjectDetailPage({
                       <Link href={`/projects/${project.id}/tasks/${t.id}`}>{t.name}</Link>
                     </td>
                     <td>{t.assignedCompany?.name ?? <span className="muted">미배정</span>}</td>
-                    <td>{t.assignee?.name ?? <span className="muted">-</span>}</td>
+                    <td>
+                      {t.assignedTeam && <span className="badge gray">{t.assignedTeam}</span>}{' '}
+                      {t.assignee?.name ?? <span className="muted">-</span>}
+                    </td>
                     <td className="muted">
                       {fmtDate(t.plannedStart)} ~ {fmtDate(t.plannedEnd)}
                     </td>

@@ -76,12 +76,20 @@ const EDGES = [
   { id: 'e39', source: 'n1769757412086_21', target: 'n1769757443654_22' },
 ];
 
+const DEFAULT_TEAMS = [
+  '생산팀', '생산기술팀', '양산품질팀', '상생협력팀', '자재관리팀', '영업관리팀',
+  '경영관리팀', '전산팀', '함평팀', '에스콘', '설계팀', '개발팀',
+];
+
 async function main() {
   const host = await prisma.company.upsert({
     where: { name: '주관사' },
     update: {},
-    create: { name: '주관사', isHost: true, status: 'ACTIVE' },
+    create: { name: '주관사', isHost: true, status: 'ACTIVE', teams: DEFAULT_TEAMS },
   });
+  if (!host.teams || host.teams.length === 0) {
+    await prisma.company.update({ where: { id: host.id }, data: { teams: DEFAULT_TEAMS } });
+  }
 
   const adminId = process.env.ADMIN_LOGIN_ID || 'admin';
   const existing = await prisma.user.findUnique({ where: { loginId: adminId } });

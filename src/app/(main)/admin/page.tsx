@@ -4,6 +4,8 @@ import {
   setCompanyStatus,
   setUserStatus,
   setUserRole,
+  setCompanyTeams,
+  setUserTeam,
   resetPassword,
 } from '@/actions/admin';
 import { ACCOUNT_STATUS_LABELS, ROLE_LABELS, fmtDate } from '@/lib/format';
@@ -114,6 +116,7 @@ export default async function AdminPage() {
               <th>회사</th>
               <th>구분</th>
               <th>사용자</th>
+              <th>팀 목록 (쉼표로 구분)</th>
               <th>상태</th>
             </tr>
           </thead>
@@ -123,6 +126,19 @@ export default async function AdminPage() {
                 <td><b>{c.name}</b></td>
                 <td>{c.isHost ? <span className="badge blue">주관사</span> : '협력업체'}</td>
                 <td>{c._count.users}명</td>
+                <td style={{ minWidth: 280 }}>
+                  <form action={setCompanyTeams} className="row">
+                    <input type="hidden" name="companyId" value={c.id} />
+                    <input
+                      type="text"
+                      name="teams"
+                      defaultValue={c.teams.join(', ')}
+                      placeholder="예: 생산팀, 양산품질팀, 자재관리팀"
+                      style={{ flex: 1 }}
+                    />
+                    <button className="btn sm secondary" type="submit">저장</button>
+                  </form>
+                </td>
                 <td>
                   <span className={`badge ${c.status.toLowerCase()}`}>
                     {ACCOUNT_STATUS_LABELS[c.status]}
@@ -132,6 +148,9 @@ export default async function AdminPage() {
             ))}
           </tbody>
         </table>
+        <div className="muted mt8">
+          팀 목록은 과제의 담당 팀 선택 드롭다운에 사용됩니다.
+        </div>
       </div>
 
       <div className="card">
@@ -142,6 +161,7 @@ export default async function AdminPage() {
               <th>이름</th>
               <th>아이디</th>
               <th>회사</th>
+              <th>소속 팀</th>
               <th>역할</th>
               <th>상태</th>
               <th></th>
@@ -153,6 +173,22 @@ export default async function AdminPage() {
                 <td>{u.name}</td>
                 <td className="muted">{u.loginId}</td>
                 <td>{u.company.name}</td>
+                <td>
+                  <form action={setUserTeam} className="row">
+                    <input type="hidden" name="userId" value={u.id} />
+                    <select name="team" defaultValue={u.team ?? ''} style={{ width: 130 }}>
+                      <option value="">(없음)</option>
+                      {Array.from(new Set([...u.company.teams, ...(u.team ? [u.team] : [])])).map(
+                        (t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        )
+                      )}
+                    </select>
+                    <button className="btn sm secondary" type="submit">저장</button>
+                  </form>
+                </td>
                 <td>
                   {u.id === admin.id ? (
                     ROLE_LABELS[u.role]

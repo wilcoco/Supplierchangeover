@@ -45,6 +45,7 @@ model Company {
   name      String        @unique
   isHost    Boolean       @default(false)
   status    AccountStatus @default(PENDING)
+  teams     String[]      @default([]) // 회사 내 팀 목록 (담당 팀 선택용)
   createdAt DateTime      @default(now())
   users     User[]
   tasks     Task[]        @relation("AssignedCompany")
@@ -57,6 +58,7 @@ model User {
   passwordHash  String
   name          String
   email         String?
+  team          String? // 소속 팀
   role          Role          @default(MEMBER)
   status        AccountStatus @default(PENDING)
   companyId     String
@@ -119,6 +121,7 @@ model Task {
   reviewNote        String?
   assignedCompanyId String?
   assignedCompany   Company?       @relation("AssignedCompany", fields: [assignedCompanyId], references: [id])
+  assignedTeam      String? // 담당 팀
   assigneeId        String?
   assignee          User?          @relation("Assignee", fields: [assigneeId], references: [id])
   plannedStart      DateTime?

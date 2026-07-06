@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
   const password = String(body.password || '');
   const name = String(body.name || '').trim();
   const email = String(body.email || '').trim() || null;
+  const team = String(body.team || '').trim() || null;
   const companyId = String(body.companyId || '');
   const newCompanyName = String(body.newCompanyName || '').trim();
 
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       passwordHash: bcrypt.hashSync(password, 10),
       name,
       email,
+      team,
       role,
       status: 'PENDING',
       companyId: targetCompanyId,
