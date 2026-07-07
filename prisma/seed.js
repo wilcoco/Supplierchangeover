@@ -82,16 +82,42 @@ const DEFAULT_TEAMS = [
 ];
 
 async function main() {
-  // 운영사(캠스) — 기존에 '주관사'로 생성된 경우 이름을 캠스로 정정
+  // 운영사(캠스) 정리 — 기존에 '주관사'로 생성된 경우 캠스로 정정하되,
+  // 이미 '캠스'라는 회사가 따로 있으면 그 회사를 운영사로 승격하고 병합한다.
   let host = await prisma.company.findFirst({ where: { isHost: true } });
+  const named = await prisma.company.findUnique({ where: { name: '캠스' } });
+
   if (host && host.name !== '캠스') {
-    host = await prisma.company.update({ where: { id: host.id }, data: { name: '캠스' } });
-    console.log('운영사 이름을 캠스로 변경');
+    if (!named) {
+      host = await prisma.company.update({ where: { id: host.id }, data: { name: '캠스' } });
+      console.log('운영사 이름을 캠스로 변경');
+    } else {
+      // '캠스'가 별도 회사로 존재 → 캠스를 운영사로 승격, 구 운영사 사용자 이동 후 강등
+      await prisma.company.update({
+        where: { id: named.id },
+        data: { isHost: true, status: 'ACTIVE' },
+      });
+      await prisma.user.updateMany({
+        where: { companyId: host.id },
+        data: { companyId: named.id },
+      });
+      await prisma.company.update({
+        where: { id: host.id },
+        data: { isHost: false, status: 'REJECTED', name: `(구)${host.name}` },
+      });
+      console.log(`운영사를 '캠스'로 병합 (기존 '${host.name}' 사용자 이동)`);
+      host = await prisma.company.findUnique({ where: { id: named.id } });
+    }
   }
   if (!host) {
-    host = await prisma.company.create({
-      data: { name: '캠스', isHost: true, status: 'ACTIVE', teams: DEFAULT_TEAMS },
-    });
+    host = named
+      ? await prisma.company.update({
+          where: { id: named.id },
+          data: { isHost: true, status: 'ACTIVE' },
+        })
+      : await prisma.company.create({
+          data: { name: '캠스', isHost: true, status: 'ACTIVE', teams: DEFAULT_TEAMS },
+        });
   }
   if (!host.teams || host.teams.length === 0) {
     await prisma.company.update({ where: { id: host.id }, data: { teams: DEFAULT_TEAMS } });
