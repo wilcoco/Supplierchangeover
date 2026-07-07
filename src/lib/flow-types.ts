@@ -17,7 +17,7 @@ export type FlowEdge = {
 };
 
 export const APPROVER_TYPE_LABELS: Record<string, string> = {
-  HOST_ADMIN: '주관사 관리자',
+  HOST_ADMIN: '캠스 관리자',
   COMPANY_ADMIN: '담당 업체 회사 관리자',
   COMPANY: '지정 회사 관리자',
   USER: '지정 사용자',

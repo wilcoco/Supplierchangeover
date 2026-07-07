@@ -21,7 +21,7 @@ async function saveFile(file: File): Promise<{ storedName: string; size: number 
   return { storedName, size: file.size };
 }
 
-/** 과제 관계자(담당자·작성자·주관사 관리자)에게 알림 */
+/** 과제 관계자(담당자·작성자·캠스 관리자)에게 알림 */
 async function notifyTaskWatchers(
   taskId: string,
   excludeUserId: string,

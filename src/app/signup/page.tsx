@@ -79,7 +79,7 @@ export default function SignupPage() {
           <div className="alert success mt16">
             가입 신청이 접수되었습니다.
             <br />
-            주관사 관리자의 승인 후 로그인할 수 있습니다.
+            캠스 관리자의 승인 후 로그인할 수 있습니다.
           </div>
           <Link href="/login" className="btn" style={{ display: 'block', textAlign: 'center' }}>
             로그인 화면으로
@@ -93,7 +93,7 @@ export default function SignupPage() {
     <div className="auth-wrap">
       <div className="auth-card">
         <h1>업체 가입 신청</h1>
-        <div className="sub">회사·아이디·비밀번호로 가입 후 주관사 승인을 받습니다.</div>
+        <div className="sub">회사·아이디·비밀번호로 가입 후 캠스 승인을 받습니다.</div>
         {error && <div className="alert error">{error}</div>}
         <form onSubmit={submit}>
           <label className="fld">

@@ -6,6 +6,8 @@ import {
   setUserRole,
   setCompanyTeams,
   setUserTeam,
+  createCompany,
+  createUser,
   resetPassword,
 } from '@/actions/admin';
 import { ACCOUNT_STATUS_LABELS, ROLE_LABELS, fmtDate } from '@/lib/format';
@@ -30,7 +32,65 @@ export default async function AdminPage() {
   return (
     <div className="container">
       <div className="page-title">관리</div>
-      <div className="page-sub">업체·사용자 가입 승인 및 계정 관리</div>
+      <div className="page-sub">협력사·사용자 등록 및 계정 관리 (캠스)</div>
+
+      <div className="grid-2">
+        <div className="card">
+          <h2>협력사 추가</h2>
+          <form action={createCompany}>
+            <label className="fld">
+              <span className="lbl">회사명</span>
+              <input type="text" name="name" required placeholder="예: (주)한국부품" />
+            </label>
+            <label className="fld">
+              <span className="lbl">팀 목록 (선택, 쉼표로 구분)</span>
+              <input type="text" name="teams" placeholder="예: 생산팀, 품질팀" />
+            </label>
+            <button className="btn" type="submit">협력사 등록</button>
+          </form>
+        </div>
+
+        <div className="card">
+          <h2>사용자 사전 등록</h2>
+          <div className="muted" style={{ marginBottom: 10 }}>
+            회사·팀·담당자를 미리 정해 계정을 만들어 두고, 해당 담당자에게 아이디와 초기
+            비밀번호를 전달하면 바로 로그인해 사용할 수 있습니다.
+          </div>
+          <form action={createUser}>
+            <div className="row" style={{ marginBottom: 10 }}>
+              <select name="companyId" required style={{ flex: 1 }}>
+                <option value="">-- 소속 회사 --</option>
+                {companies
+                  .filter((c) => c.status === 'ACTIVE')
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.isHost ? ' (캠스)' : ''}
+                    </option>
+                  ))}
+              </select>
+              <input type="text" name="team" placeholder="소속 팀 (선택)" style={{ flex: 1 }} />
+            </div>
+            <div className="row" style={{ marginBottom: 10 }}>
+              <input type="text" name="name" required placeholder="이름" style={{ flex: 1 }} />
+              <input type="text" name="loginId" required minLength={3} placeholder="아이디" style={{ flex: 1 }} />
+            </div>
+            <div className="row" style={{ marginBottom: 10 }}>
+              <input
+                type="text"
+                name="password"
+                placeholder="초기 비밀번호 (비우면 init1234!)"
+                style={{ flex: 1 }}
+              />
+              <select name="role" style={{ flex: 1 }}>
+                <option value="MEMBER">일반 사용자</option>
+                <option value="COMPANY_ADMIN">회사 관리자</option>
+              </select>
+            </div>
+            <button className="btn" type="submit">계정 생성</button>
+          </form>
+        </div>
+      </div>
 
       {(pendingCompanies.length > 0 || pendingUsers.length > 0) && (
         <div className="card" style={{ borderColor: '#fbbf24' }}>
@@ -124,7 +184,7 @@ export default async function AdminPage() {
             {companies.map((c) => (
               <tr key={c.id}>
                 <td><b>{c.name}</b></td>
-                <td>{c.isHost ? <span className="badge blue">주관사</span> : '협력업체'}</td>
+                <td>{c.isHost ? <span className="badge blue">캠스 (운영)</span> : '협력사'}</td>
                 <td>{c._count.users}명</td>
                 <td style={{ minWidth: 280 }}>
                   <form action={setCompanyTeams} className="row">

@@ -54,6 +54,50 @@ export async function setUserRole(formData: FormData) {
   revalidatePath('/admin');
 }
 
+/** 협력사 직접 추가 — 캠스가 미리 등록 */
+export async function createCompany(formData: FormData) {
+  await requireAdmin();
+  const name = String(formData.get('name') || '').trim();
+  if (!name) return;
+  const dup = await prisma.company.findUnique({ where: { name } });
+  if (dup) return;
+  const teams = String(formData.get('teams') || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  await prisma.company.create({ data: { name, status: 'ACTIVE', teams } });
+  revalidatePath('/admin');
+}
+
+/** 사용자 사전 등록 — 캠스가 회사·팀·담당자를 미리 정해 계정 생성 */
+export async function createUser(formData: FormData) {
+  await requireAdmin();
+  const name = String(formData.get('name') || '').trim();
+  const loginId = String(formData.get('loginId') || '').trim();
+  const companyId = String(formData.get('companyId') || '');
+  const team = String(formData.get('team') || '').trim() || null;
+  const role = String(formData.get('role') || 'MEMBER');
+  const password = String(formData.get('password') || '') || 'init1234!';
+  if (!name || loginId.length < 3 || !companyId) return;
+  if (!['COMPANY_ADMIN', 'MEMBER'].includes(role)) return;
+  const dup = await prisma.user.findUnique({ where: { loginId } });
+  if (dup) return;
+  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  if (!company) return;
+  await prisma.user.create({
+    data: {
+      loginId,
+      passwordHash: bcrypt.hashSync(password, 10),
+      name,
+      team,
+      role: role as 'COMPANY_ADMIN' | 'MEMBER',
+      status: 'ACTIVE', // 사전 등록 계정은 즉시 사용 가능
+      companyId,
+    },
+  });
+  revalidatePath('/admin');
+}
+
 /** 회사 팀 목록 설정 (쉼표 구분) */
 export async function setCompanyTeams(formData: FormData) {
   await requireAdmin();

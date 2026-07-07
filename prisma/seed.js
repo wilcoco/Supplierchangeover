@@ -82,11 +82,17 @@ const DEFAULT_TEAMS = [
 ];
 
 async function main() {
-  const host = await prisma.company.upsert({
-    where: { name: '주관사' },
-    update: {},
-    create: { name: '주관사', isHost: true, status: 'ACTIVE', teams: DEFAULT_TEAMS },
-  });
+  // 운영사(캠스) — 기존에 '주관사'로 생성된 경우 이름을 캠스로 정정
+  let host = await prisma.company.findFirst({ where: { isHost: true } });
+  if (host && host.name !== '캠스') {
+    host = await prisma.company.update({ where: { id: host.id }, data: { name: '캠스' } });
+    console.log('운영사 이름을 캠스로 변경');
+  }
+  if (!host) {
+    host = await prisma.company.create({
+      data: { name: '캠스', isHost: true, status: 'ACTIVE', teams: DEFAULT_TEAMS },
+    });
+  }
   if (!host.teams || host.teams.length === 0) {
     await prisma.company.update({ where: { id: host.id }, data: { teams: DEFAULT_TEAMS } });
   }

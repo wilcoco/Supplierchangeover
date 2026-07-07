@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 });
   }
   if (user.status === 'PENDING') {
-    return NextResponse.json({ error: '계정이 승인 대기 중입니다. 주관사 승인 후 이용할 수 있습니다.' }, { status: 403 });
+    return NextResponse.json({ error: '계정이 승인 대기 중입니다. 캠스 승인 후 이용할 수 있습니다.' }, { status: 403 });
   }
   if (user.status === 'REJECTED') {
     return NextResponse.json({ error: '가입이 거절된 계정입니다.' }, { status: 403 });

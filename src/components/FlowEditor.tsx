@@ -370,7 +370,7 @@ export function FlowEditor({
                       onChange={(e) => patchSelNode({ approverType: e.target.value })}
                       disabled={readOnly}
                     >
-                      <option value="HOST_ADMIN">주관사 관리자</option>
+                      <option value="HOST_ADMIN">캠스 관리자</option>
                       <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
                       <option value="NONE">승인 불필요 (즉시 완료)</option>
                     </select>
@@ -399,7 +399,7 @@ export function FlowEditor({
               </label>
               <div className="muted">
                 승인/반려 조건은 선행 과제의 승인 결과에 따라 분기합니다. 조건이 걸린 선행 과제는
-                자동으로 승인 과제가 되어 주관사 관리자의 승인/반려로 완료됩니다.
+                자동으로 승인 과제가 되어 캠스 관리자의 승인/반려로 완료됩니다.
               </div>
             </>
           ) : (

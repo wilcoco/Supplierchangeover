@@ -38,9 +38,9 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         <Link href="/notifications" className="navlink">
           알림{unread > 0 && <span className="badge-dot">{unread}</span>}
         </Link>
-        <span className="userinfo">
+        <Link href="/account" className="userinfo" style={{ textDecoration: 'none' }}>
           <b>{user.name}</b> · {user.company.name} · {ROLE_LABELS[user.role]}
-        </span>
+        </Link>
         <form action="/api/auth/logout" method="post">
           <button className="btn sm secondary" type="submit">
             로그아웃

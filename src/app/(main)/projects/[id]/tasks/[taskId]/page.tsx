@@ -65,7 +65,7 @@ export default async function TaskDetailPage({
 
   const approverLabel =
     task.approverType === 'HOST_ADMIN'
-      ? '주관사 관리자'
+      ? '캠스 관리자'
       : task.approverType === 'COMPANY_ADMIN'
         ? `담당 업체 회사 관리자${task.assignedCompany ? ` (${task.assignedCompany.name})` : ''}`
         : task.approverType === 'COMPANY'
@@ -169,7 +169,7 @@ export default async function TaskDetailPage({
       </div>
 
       {approvalTask && ['READY', 'IN_PROGRESS'].includes(task.status) && !isAdmin && (
-        <div className="alert info">이 과제는 주관사 관리자의 승인/반려로 완료됩니다.</div>
+        <div className="alert info">이 과제는 캠스 관리자의 승인/반려로 완료됩니다.</div>
       )}
 
       {task.status === 'REVIEW' && (
@@ -225,7 +225,7 @@ export default async function TaskDetailPage({
                         {companies.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name}
-                            {c.isHost ? ' (주관사)' : ''}
+                            {c.isHost ? ' (운영)' : ''}
                           </option>
                         ))}
                       </select>
@@ -275,7 +275,7 @@ export default async function TaskDetailPage({
                       <input type="hidden" name="taskId" value={task.id} />
                       <div className="row" style={{ marginBottom: 6 }}>
                         <select name="approverType" defaultValue={task.approverType} style={{ flex: 1 }}>
-                          <option value="HOST_ADMIN">주관사 관리자</option>
+                          <option value="HOST_ADMIN">캠스 관리자</option>
                           <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
                           <option value="COMPANY">지정 회사 관리자 (교차 승인)</option>
                           <option value="USER">지정 사용자 (교차 승인)</option>
@@ -295,7 +295,7 @@ export default async function TaskDetailPage({
                           {companies.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
-                              {c.isHost ? ' (주관사)' : ''}
+                              {c.isHost ? ' (운영)' : ''}
                             </option>
                           ))}
                         </select>
@@ -317,7 +317,7 @@ export default async function TaskDetailPage({
                       </div>
                     </form>
                   ) : approvalTask ? (
-                    <span className="muted">분기 결정 과제 — 주관사 관리자 승인/반려</span>
+                    <span className="muted">분기 결정 과제 — 캠스 관리자 승인/반려</span>
                   ) : (
                     approverLabel
                   )}

@@ -49,7 +49,7 @@ function canReview(
     approverUserId: string | null;
   }
 ) {
-  if (user.role === 'ADMIN') return true; // 주관사 관리자는 항상 가능
+  if (user.role === 'ADMIN') return true; // 캠스(운영) 관리자는 항상 가능
   switch (task.approverType) {
     case 'COMPANY_ADMIN': // 담당 업체의 회사 관리자
       return user.role === 'COMPANY_ADMIN' && task.assignedCompanyId === user.companyId;
@@ -107,7 +107,7 @@ export async function completeTask(formData: FormData) {
   if (!['READY', 'IN_PROGRESS'].includes(task.status)) return;
   if (!canWork(user, task)) return;
 
-  // 분기 결정 과제(XOR 승인/반려)는 주관사 관리자의 결정이 곧 완료
+  // 분기 결정 과제(XOR 승인/반려)는 캠스 관리자의 결정이 곧 완료
   if (approval) {
     if (user.role !== 'ADMIN') return;
     await prisma.task.update({
@@ -191,7 +191,7 @@ export async function reviewTask(formData: FormData) {
   revalidatePath(`/projects/${task.projectId}`);
 }
 
-/** 과제별 완료 승인자 변경 (주관사 관리자만) — 회사·사용자 교차 지정 가능 */
+/** 과제별 완료 승인자 변경 (캠스 관리자만) — 회사·사용자 교차 지정 가능 */
 export async function setApproverType(formData: FormData) {
   const user = await requireUser();
   if (user.role !== 'ADMIN') return;
@@ -255,7 +255,7 @@ export async function assignUser(formData: FormData) {
   const task = await getTask(String(formData.get('taskId')));
   const assigneeId = String(formData.get('assigneeId') || '') || null;
   const assignedTeam = String(formData.get('team') || '').trim() || null;
-  // 주관사 관리자 또는 배정된 회사의 회사 관리자만
+  // 캠스 관리자 또는 배정된 회사의 회사 관리자만
   const allowed =
     user.role === 'ADMIN' ||
     (user.role === 'COMPANY_ADMIN' && task.assignedCompanyId === user.companyId);
