@@ -81,6 +81,12 @@ const DEFAULT_TEAMS = [
   '경영관리팀', '전산팀', '함평팀', '에스콘', '설계팀', '개발팀',
 ];
 
+// 캠스 임원 조직 (담당 팀 드롭다운에 함께 노출)
+const LEADERSHIP_TEAMS = [
+  '생산관리실장', '품질경영실장', '함평공장장', '연구개발실장', '경영관리실장',
+  '경영관리대표', '생산관리대표',
+];
+
 async function main() {
   // 운영사(캠스) 정리 — 기존에 '주관사'로 생성된 경우 캠스로 정정하되,
   // 이미 '캠스'라는 회사가 따로 있으면 그 회사를 운영사로 승격하고 병합한다.
@@ -120,7 +126,18 @@ async function main() {
         });
   }
   if (!host.teams || host.teams.length === 0) {
-    await prisma.company.update({ where: { id: host.id }, data: { teams: DEFAULT_TEAMS } });
+    host = await prisma.company.update({
+      where: { id: host.id },
+      data: { teams: [...DEFAULT_TEAMS, ...LEADERSHIP_TEAMS] },
+    });
+  }
+  // 임원 조직이 하나도 없으면 1회 추가 (이후 관리 화면에서 자유롭게 편집 가능)
+  if (!LEADERSHIP_TEAMS.some((t) => host.teams.includes(t))) {
+    await prisma.company.update({
+      where: { id: host.id },
+      data: { teams: [...host.teams, ...LEADERSHIP_TEAMS] },
+    });
+    console.log('캠스 임원 조직 추가:', LEADERSHIP_TEAMS.join(', '));
   }
 
   const adminId = process.env.ADMIN_LOGIN_ID || 'admin';
