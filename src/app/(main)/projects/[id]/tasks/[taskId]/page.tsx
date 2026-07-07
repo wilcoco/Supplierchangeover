@@ -10,9 +10,9 @@ import {
   reopenTask,
   assignCompany,
   updateTaskDates,
-  setApproverType,
 } from '@/actions/tasks';
 import { AssigneeSelector } from '@/components/AssigneeSelector';
+import { ApproverSelector } from '@/components/ApproverSelector';
 import { addWorklog, addComment } from '@/actions/worklogs';
 import { fmtDate, fmtDateTime, isOverdue } from '@/lib/format';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -271,51 +271,23 @@ export default async function TaskDetailPage({
                 <th>완료 승인자</th>
                 <td>
                   {isAdmin && projectActive && !approvalTask ? (
-                    <form action={setApproverType}>
-                      <input type="hidden" name="taskId" value={task.id} />
-                      <div className="row" style={{ marginBottom: 6 }}>
-                        <select name="approverType" defaultValue={task.approverType} style={{ flex: 1 }}>
-                          <option value="HOST_ADMIN">캠스 관리자</option>
-                          <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
-                          <option value="COMPANY">지정 회사 관리자 (교차 승인)</option>
-                          <option value="USER">지정 사용자 (교차 승인)</option>
-                          <option value="NONE">승인 불필요 (즉시 완료)</option>
-                        </select>
-                        <button className="btn sm secondary" type="submit">
-                          변경
-                        </button>
-                      </div>
-                      <div className="row">
-                        <select
-                          name="approverCompanyId"
-                          defaultValue={task.approverCompanyId ?? ''}
-                          style={{ flex: 1 }}
-                        >
-                          <option value="">(지정 회사 선택 시)</option>
-                          {companies.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                              {c.isHost ? ' (운영)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          name="approverUserId"
-                          defaultValue={task.approverUserId ?? ''}
-                          style={{ flex: 1 }}
-                        >
-                          <option value="">(지정 사용자 선택 시)</option>
-                          {allUsers.map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.name} — {u.company.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="muted mt8">
-                        현재: {approverLabel} · 승인자는 회사에 관계없이 지정할 수 있습니다.
-                      </div>
-                    </form>
+                    <ApproverSelector
+                      taskId={task.id}
+                      companies={companies.map((c) => ({
+                        id: c.id,
+                        name: c.name,
+                        isHost: c.isHost,
+                      }))}
+                      users={allUsers.map((u) => ({
+                        id: u.id,
+                        name: u.name,
+                        companyName: u.company.name,
+                      }))}
+                      currentType={task.approverType}
+                      currentCompanyId={task.approverCompanyId}
+                      currentUserId={task.approverUserId}
+                      currentLabel={approverLabel}
+                    />
                   ) : approvalTask ? (
                     <span className="muted">분기 결정 과제 — 캠스 관리자 승인/반려</span>
                   ) : (
