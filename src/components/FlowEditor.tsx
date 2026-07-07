@@ -14,7 +14,9 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { saveTemplate } from '@/actions/templates';
-import { NODE_TYPE_LABELS, type FlowEdge, type FlowNode } from '@/lib/flow-types';
+import { APPROVER_TYPE_LABELS, NODE_TYPE_LABELS, type FlowEdge, type FlowNode } from '@/lib/flow-types';
+
+export type CompanyOption = { id: string; name: string; isHost: boolean; teams: string[] };
 
 type NodeData = {
   label: string;
@@ -23,6 +25,8 @@ type NodeData = {
   description: string;
   durationDays: number;
   approverType: string;
+  companyId: string; // 담당 업체 기본값
+  teamName: string; // 담당 팀 기본값
 };
 
 const TYPE_STYLES: Record<string, React.CSSProperties> = {
@@ -57,6 +61,7 @@ export function FlowEditor({
   initialEstimatedDays,
   initialNodes,
   initialEdges,
+  companies,
   readOnly,
 }: {
   templateId: string;
@@ -65,6 +70,7 @@ export function FlowEditor({
   initialEstimatedDays: number;
   initialNodes: FlowNode[];
   initialEdges: FlowEdge[];
+  companies: CompanyOption[];
   readOnly: boolean;
 }) {
   const rfInitialNodes: Node<NodeData>[] = useMemo(
@@ -79,6 +85,8 @@ export function FlowEditor({
           description: n.description ?? '',
           durationDays: n.durationDays ?? (n.type === 'task' ? 5 : 0),
           approverType: n.approverType ?? 'HOST_ADMIN',
+          companyId: n.defaultCompanyId ?? '',
+          teamName: n.defaultTeam ?? '',
         },
         style: nodeStyle(n.type),
       })),
@@ -138,6 +146,8 @@ export function FlowEditor({
           description: '',
           durationDays: type === 'task' ? 5 : 0,
           approverType: 'HOST_ADMIN',
+          companyId: '',
+          teamName: '',
         },
         style: nodeStyle(type),
       },
@@ -192,6 +202,9 @@ export function FlowEditor({
         description: n.data.description || undefined,
         durationDays: n.data.nodeType === 'task' ? n.data.durationDays : undefined,
         approverType: n.data.nodeType === 'task' ? n.data.approverType : undefined,
+        defaultCompanyId:
+          n.data.nodeType === 'task' && n.data.companyId ? n.data.companyId : undefined,
+        defaultTeam: n.data.nodeType === 'task' && n.data.teamName ? n.data.teamName : undefined,
         position: n.position,
       }));
       const outEdges: FlowEdge[] = edges.map((e) => ({
@@ -364,6 +377,42 @@ export function FlowEditor({
                     />
                   </label>
                   <label className="fld">
+                    <span className="lbl">담당 업체 (기본값)</span>
+                    <select
+                      value={selNode.data.companyId}
+                      onChange={(e) => patchSelNode({ companyId: e.target.value, teamName: '' })}
+                      disabled={readOnly}
+                    >
+                      <option value="">미지정 (프로젝트에서 배정)</option>
+                      {companies.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                          {c.isHost ? ' (캠스)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="fld">
+                    <span className="lbl">담당 팀 (기본값)</span>
+                    <select
+                      value={selNode.data.teamName}
+                      onChange={(e) => patchSelNode({ teamName: e.target.value })}
+                      disabled={readOnly || !selNode.data.companyId}
+                    >
+                      <option value="">미지정</option>
+                      {(companies.find((c) => c.id === selNode.data.companyId)?.teams ?? []).map(
+                        (t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        )
+                      )}
+                    </select>
+                    <span className="muted">
+                      저장하면 이 템플릿으로 프로젝트 생성 시 과제에 자동 배정됩니다.
+                    </span>
+                  </label>
+                  <label className="fld">
                     <span className="lbl">완료 승인자 (업무 완료 시 승인 게이트)</span>
                     <select
                       value={selNode.data.approverType}
@@ -405,6 +454,69 @@ export function FlowEditor({
           ) : (
             <div className="muted">노드나 연결선을 클릭하면 여기서 편집할 수 있습니다.</div>
           )}
+        </div>
+      </div>
+
+      <div className="card mt16">
+        <h2>전체 과제 목록 — 저장된 담당 배정</h2>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>과제</th>
+              <th>담당 업체</th>
+              <th>담당 팀</th>
+              <th>소요일</th>
+              <th>완료 승인자</th>
+            </tr>
+          </thead>
+          <tbody>
+            {nodes
+              .filter((n) => n.data.nodeType === 'task')
+              .map((n) => {
+                const company = companies.find((c) => c.id === n.data.companyId);
+                return (
+                  <tr
+                    key={n.id}
+                    onClick={() => {
+                      setSelNodeId(n.id);
+                      setSelEdgeId(null);
+                    }}
+                    style={{
+                      cursor: 'pointer',
+                      background: n.id === selNodeId ? '#eff6ff' : undefined,
+                    }}
+                  >
+                    <td>{n.data.name}</td>
+                    <td>
+                      {company ? (
+                        <>
+                          {company.name}
+                          {company.isHost ? ' (캠스)' : ''}
+                        </>
+                      ) : (
+                        <span className="muted">미지정</span>
+                      )}
+                    </td>
+                    <td>
+                      {n.data.teamName ? (
+                        <span className="badge gray">{n.data.teamName}</span>
+                      ) : (
+                        <span className="muted">미지정</span>
+                      )}
+                    </td>
+                    <td>{n.data.durationDays}일</td>
+                    <td className="muted">
+                      {APPROVER_TYPE_LABELS[n.data.approverType] ?? n.data.approverType}
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+        <div className="muted mt8">
+          행을 클릭하면 해당 과제 노드가 선택됩니다. 담당 배정 기본값은 템플릿 저장 시 함께
+          저장되며, 이 템플릿으로 프로젝트를 만들면 과제에 자동 적용됩니다. 담당자(개인)는
+          프로젝트 생성 후 과제 화면에서 팀 기준으로 지정합니다.
         </div>
       </div>
     </div>

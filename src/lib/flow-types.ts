@@ -5,7 +5,9 @@ export type FlowNode = {
   taskType?: string;
   description?: string;
   durationDays?: number;
-  approverType?: string; // HOST_ADMIN | COMPANY_ADMIN | NONE
+  approverType?: string; // HOST_ADMIN | COMPANY_ADMIN | COMPANY | USER | NONE
+  defaultCompanyId?: string; // 담당 업체 기본값 (프로젝트 생성 시 자동 배정)
+  defaultTeam?: string; // 담당 팀 기본값
   position: { x: number; y: number };
 };
 

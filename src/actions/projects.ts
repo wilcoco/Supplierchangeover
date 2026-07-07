@@ -25,6 +25,13 @@ export async function createProject(formData: FormData) {
   const startDate = new Date(startDateStr + 'T00:00:00');
   const schedule = scheduleDates(nodes, edges, startDate);
 
+  // 템플릿에 저장된 담당 업체 기본값 검증용 (활성 회사만)
+  const activeCompanies = await prisma.company.findMany({
+    where: { status: 'ACTIVE' },
+    select: { id: true },
+  });
+  const activeCompanyIds = new Set(activeCompanies.map((c) => c.id));
+
   const project = await prisma.project.create({
     data: {
       name,
@@ -44,6 +51,11 @@ export async function createProject(formData: FormData) {
             taskType: n.taskType ?? null,
             description: n.description ?? null,
             approverType: n.approverType ?? 'HOST_ADMIN',
+            assignedCompanyId:
+              n.defaultCompanyId && activeCompanyIds.has(n.defaultCompanyId)
+                ? n.defaultCompanyId
+                : null,
+            assignedTeam: n.defaultTeam ?? null,
             status: n.type === 'start' ? 'DONE' : 'WAITING',
             completedAt: n.type === 'start' ? new Date() : null,
             plannedStart: sched?.plannedStart ?? null,
