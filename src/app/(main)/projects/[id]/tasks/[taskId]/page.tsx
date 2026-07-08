@@ -14,6 +14,13 @@ import {
 import { AssigneeSelector } from '@/components/AssigneeSelector';
 import { ApproverSelector } from '@/components/ApproverSelector';
 import { addWorklog, addComment } from '@/actions/worklogs';
+import {
+  addSubtask,
+  updateSubtask,
+  toggleSubtask,
+  deleteSubtask,
+  importSubtasksFromDescription,
+} from '@/actions/subtasks';
 import { fmtDate, fmtDateTime, isOverdue } from '@/lib/format';
 import { StatusBadge } from '@/components/StatusBadge';
 import { APPROVER_TYPE_LABELS, type FlowEdge } from '@/lib/flow-types';
@@ -37,6 +44,7 @@ export default async function TaskDetailPage({
       assignee: true,
       approverCompany: true,
       approverUser: { include: { company: true } },
+      subtasks: { include: { assignee: true }, orderBy: { order: 'asc' } },
       worklogs: {
         include: { author: { include: { company: true } }, attachments: true },
         orderBy: { createdAt: 'desc' },
@@ -76,6 +84,8 @@ export default async function TaskDetailPage({
   const canAssignUser =
     isAdmin || (user.role === 'COMPANY_ADMIN' && task.assignedCompanyId === user.companyId);
   const projectActive = task.project.status === 'ACTIVE';
+  const subDone = task.subtasks.filter((s) => s.done).length;
+  const subRemaining = task.subtasks.length - subDone;
 
   const [companies, companyUsers, allUsers] = await Promise.all([
     isAdmin
@@ -130,14 +140,21 @@ export default async function TaskDetailPage({
                 </button>
               </form>
             )}
-            {['READY', 'IN_PROGRESS'].includes(task.status) && canWork && !approvalTask && (
-              <form action={completeTask}>
-                <input type="hidden" name="taskId" value={task.id} />
-                <button className="btn success" type="submit">
-                  {task.approverType === 'NONE' ? '완료 처리' : '완료 요청 (승인 상신)'}
-                </button>
-              </form>
-            )}
+            {['READY', 'IN_PROGRESS'].includes(task.status) &&
+              canWork &&
+              !approvalTask &&
+              (subRemaining > 0 ? (
+                <span className="badge pending">
+                  세부 항목 {subRemaining}건 완료 후 요청 가능
+                </span>
+              ) : (
+                <form action={completeTask}>
+                  <input type="hidden" name="taskId" value={task.id} />
+                  <button className="btn success" type="submit">
+                    {task.approverType === 'NONE' ? '완료 처리' : '완료 요청 (승인 상신)'}
+                  </button>
+                </form>
+              ))}
             {['READY', 'IN_PROGRESS'].includes(task.status) && approvalTask && isAdmin && (
               <>
                 <form action={completeTask}>
@@ -328,6 +345,140 @@ export default async function TaskDetailPage({
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>
+          세부 항목 — 팀별 병렬 진행{' '}
+          {task.subtasks.length > 0 && (
+            <span className="muted">
+              ({subDone}/{task.subtasks.length} 완료)
+            </span>
+          )}
+        </h2>
+        {task.subtasks.length === 0 && (
+          <div className="row" style={{ marginBottom: 10 }}>
+            <span className="muted">
+              세부 항목이 없습니다. 팀별 세부 업무를 등록해 병렬로 진행하세요.
+            </span>
+            {task.description && canWork && projectActive && (
+              <form action={importSubtasksFromDescription}>
+                <input type="hidden" name="taskId" value={task.id} />
+                <button className="btn sm secondary" type="submit">
+                  과제 내용에서 세부 항목 가져오기
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+        {task.subtasks.length > 0 && (
+          <table className="tbl" style={{ marginBottom: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ width: 90 }}>상태</th>
+                <th>항목</th>
+                <th style={{ width: 330 }}>담당 팀 / 담당자</th>
+                <th style={{ width: 50 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {task.subtasks.map((s) => (
+                <tr key={s.id} style={s.done ? { opacity: 0.6 } : undefined}>
+                  <td>
+                    {canWork && projectActive ? (
+                      <form action={toggleSubtask}>
+                        <input type="hidden" name="subtaskId" value={s.id} />
+                        <button
+                          className={`btn sm ${s.done ? 'secondary' : 'success'}`}
+                          type="submit"
+                        >
+                          {s.done ? '↺ 취소' : '✓ 완료'}
+                        </button>
+                      </form>
+                    ) : (
+                      <span className={`badge ${s.done ? 'done' : 'ready'}`}>
+                        {s.done ? '완료' : '진행'}
+                      </span>
+                    )}
+                  </td>
+                  <td style={s.done ? { textDecoration: 'line-through' } : undefined}>
+                    {s.title}
+                    {s.done && s.doneAt && (
+                      <span className="muted"> · {fmtDate(s.doneAt)}</span>
+                    )}
+                  </td>
+                  <td>
+                    {canWork && projectActive ? (
+                      <form action={updateSubtask} className="row">
+                        <input type="hidden" name="subtaskId" value={s.id} />
+                        <input
+                          type="text"
+                          name="team"
+                          defaultValue={s.team ?? ''}
+                          placeholder="담당 팀"
+                          style={{ width: 110 }}
+                        />
+                        <select name="assigneeId" defaultValue={s.assigneeId ?? ''} style={{ flex: 1 }}>
+                          <option value="">담당자 미지정</option>
+                          {companyUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name}
+                              {u.team ? ` — ${u.team}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="btn sm secondary" type="submit">
+                          저장
+                        </button>
+                      </form>
+                    ) : (
+                      <span>
+                        {s.team && <span className="badge gray">{s.team}</span>}{' '}
+                        {s.assignee?.name ?? <span className="muted">-</span>}
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {canWork && projectActive && (
+                      <form action={deleteSubtask}>
+                        <input type="hidden" name="subtaskId" value={s.id} />
+                        <button className="btn sm danger" type="submit">
+                          ✕
+                        </button>
+                      </form>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {canWork && projectActive && (
+          <form action={addSubtask} className="row">
+            <input type="hidden" name="taskId" value={task.id} />
+            <input
+              type="text"
+              name="team"
+              placeholder="담당 팀 (선택)"
+              style={{ width: 130 }}
+            />
+            <input
+              type="text"
+              name="title"
+              placeholder="세부 항목 내용 (예: 4M / ISIR 일정 수립)"
+              required
+              style={{ flex: 1 }}
+            />
+            <button className="btn sm" type="submit">
+              + 추가
+            </button>
+          </form>
+        )}
+        {subRemaining > 0 && (
+          <div className="muted mt8">
+            세부 항목이 모두 완료되어야 과제 완료 요청을 할 수 있습니다.
+          </div>
+        )}
       </div>
 
       <div className="card">

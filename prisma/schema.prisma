@@ -69,6 +69,7 @@ model User {
   notifications Notification[]
   assignedTasks Task[]        @relation("Assignee")
   approverTasks Task[]        @relation("ApproverUser")
+  subtasks      Subtask[]     @relation("SubtaskAssignee")
 }
 
 model ProcessTemplate {
@@ -131,8 +132,24 @@ model Task {
   worklogs          Worklog[]
   comments          Comment[]
   attachments       Attachment[]
+  subtasks          Subtask[]
 
   @@unique([projectId, nodeId])
+}
+
+// 과제의 세부 항목 — 팀별로 병렬 진행하는 체크리스트
+model Subtask {
+  id         String    @id @default(cuid())
+  taskId     String
+  task       Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title      String
+  team       String?
+  assigneeId String?
+  assignee   User?     @relation("SubtaskAssignee", fields: [assigneeId], references: [id])
+  done       Boolean   @default(false)
+  doneAt     DateTime?
+  order      Int       @default(0)
+  createdAt  DateTime  @default(now())
 }
 
 model Worklog {

@@ -31,7 +31,11 @@ export default async function ProjectDetailPage({
     where: { id: params.id },
     include: {
       tasks: {
-        include: { assignedCompany: true, assignee: true },
+        include: {
+          assignedCompany: true,
+          assignee: true,
+          subtasks: { select: { done: true } },
+        },
         orderBy: { plannedStart: 'asc' },
       },
       template: { select: { name: true } },
@@ -120,6 +124,11 @@ export default async function ProjectDetailPage({
                   <tr key={t.id}>
                     <td>
                       <Link href={`/projects/${project.id}/tasks/${t.id}`}>{t.name}</Link>
+                      {t.subtasks.length > 0 && (
+                        <span className="badge gray" style={{ marginLeft: 6 }}>
+                          세부 {t.subtasks.filter((s) => s.done).length}/{t.subtasks.length}
+                        </span>
+                      )}
                     </td>
                     <td>{t.assignedCompany?.name ?? <span className="muted">미배정</span>}</td>
                     <td>

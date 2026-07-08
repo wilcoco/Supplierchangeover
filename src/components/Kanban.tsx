@@ -10,6 +10,7 @@ type KanbanTask = {
   assignedTeam: string | null;
   assignedCompany: { name: string } | null;
   assignee: { name: string } | null;
+  subtasks: { done: boolean }[];
 };
 
 const COLUMNS = ['WAITING', 'READY', 'IN_PROGRESS', 'REVIEW', 'DONE'] as const;
@@ -28,6 +29,11 @@ export function Kanban({ tasks }: { tasks: KanbanTask[] }) {
               <Link key={t.id} href={`/projects/${t.projectId}/tasks/${t.id}`} className="kcard">
                 <div>
                   {t.name} {isOverdue(t) && <span className="badge overdue">지연</span>}
+                  {t.subtasks.length > 0 && (
+                    <span className="badge gray" style={{ marginLeft: 4 }}>
+                      {t.subtasks.filter((s) => s.done).length}/{t.subtasks.length}
+                    </span>
+                  )}
                 </div>
                 <div className="meta">
                   {t.assignedCompany?.name ?? '미배정'}

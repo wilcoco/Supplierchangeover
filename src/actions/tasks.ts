@@ -107,6 +107,14 @@ export async function completeTask(formData: FormData) {
   if (!['READY', 'IN_PROGRESS'].includes(task.status)) return;
   if (!canWork(user, task)) return;
 
+  // 세부 항목이 남아 있으면 완료 불가 (병렬 세부 업무 모두 완료 필요)
+  if (!approval) {
+    const remaining = await prisma.subtask.count({
+      where: { taskId: task.id, done: false },
+    });
+    if (remaining > 0) return;
+  }
+
   // 분기 결정 과제(XOR 승인/반려)는 캠스 관리자의 결정이 곧 완료
   if (approval) {
     if (user.role !== 'ADMIN') return;
