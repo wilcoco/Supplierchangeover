@@ -20,7 +20,10 @@ export function AssigneeSelector({
   currentAssigneeId: string | null;
 }) {
   const [team, setTeam] = useState(currentTeam ?? '');
-  const filtered = team ? users.filter((u) => u.team === team) : users;
+  // 팀을 고르면 팀원 우선 필터링하되, 팀 구성이 없으면 회사 전체 명단에서 지정 가능
+  const teamMembers = team ? users.filter((u) => u.team === team) : users;
+  const fallbackToAll = team !== '' && teamMembers.length === 0;
+  const filtered = fallbackToAll ? users : teamMembers;
 
   return (
     <form action={assignUser}>
@@ -48,9 +51,15 @@ export function AssigneeSelector({
           지정
         </button>
       </div>
-      {team && filtered.length === 0 && (
+      {fallbackToAll && (
         <div className="muted mt8">
-          이 팀에 등록된 사용자가 없습니다. 관리 화면에서 사용자의 소속 팀을 지정하세요.
+          이 팀에 등록된 사용자가 없어 회사 전체 명단을 표시합니다. (담당 팀은 선택한 값으로
+          저장됩니다)
+        </div>
+      )}
+      {users.length === 0 && (
+        <div className="muted mt8">
+          이 회사에 등록된 사용자가 없습니다. 관리 화면에서 사용자를 사전 등록하세요.
         </div>
       )}
     </form>
