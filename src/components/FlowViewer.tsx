@@ -16,9 +16,10 @@ const STATUS_COLORS: Record<string, { border: string; bg: string }> = {
 };
 
 function nodeLabel(n: FlowNode): string {
-  if (n.type === 'gateway_xor') return `◇ ${n.name}`;
-  if (n.type === 'gateway_parallel') return `◈ ${n.name}`;
-  return n.name;
+  const prefix = n.isMilestone ? '◆ ' : '';
+  if (n.type === 'gateway_xor') return `${prefix}◇ ${n.name}`;
+  if (n.type === 'gateway_parallel') return `${prefix}◈ ${n.name}`;
+  return `${prefix}${n.name}`;
 }
 
 function condLabel(cond?: string): string | undefined {
@@ -55,7 +56,8 @@ export function FlowViewer({
           position: n.position,
           data: { label: nodeLabel(n) },
           style: {
-            border: `2px solid ${c.border}`,
+            border: n.isMilestone ? `3px solid #d97706` : `2px solid ${c.border}`,
+            boxShadow: n.isMilestone ? '0 0 0 3px rgba(217,119,6,0.15)' : undefined,
             background: isEndpoint ? '#0f172a' : c.bg,
             color: isEndpoint ? '#fff' : '#0f172a',
             borderRadius: isGateway ? 4 : isEndpoint ? 999 : 8,

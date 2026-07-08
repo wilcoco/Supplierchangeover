@@ -51,6 +51,7 @@ export async function createProject(formData: FormData) {
             taskType: n.taskType ?? null,
             description: n.description ?? null,
             approverType: n.approverType ?? 'HOST_ADMIN',
+            isMilestone: n.isMilestone ?? false,
             assignedCompanyId:
               n.defaultCompanyId && activeCompanyIds.has(n.defaultCompanyId)
                 ? n.defaultCompanyId

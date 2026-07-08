@@ -109,6 +109,7 @@ model Task {
   name              String
   type              String // task | start | end | gateway_xor | gateway_parallel
   taskType          String? // WORKLOG 등
+  isMilestone       Boolean        @default(false) // 핵심 마일스톤/게이트
   description       String?
   status            TaskStatus     @default(WAITING)
   approval          ApprovalStatus @default(NONE)

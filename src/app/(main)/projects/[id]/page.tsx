@@ -92,6 +92,51 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
+      {(() => {
+        const milestones = project.tasks
+          .filter((t) => t.isMilestone)
+          .sort(
+            (a, b) => (a.plannedStart?.getTime() ?? 0) - (b.plannedStart?.getTime() ?? 0)
+          );
+        if (milestones.length === 0) return null;
+        return (
+          <div className="card msbar-card">
+            <h2>핵심 마일스톤 · 게이트</h2>
+            <div className="msbar">
+              {milestones.map((m) => {
+                const color =
+                  m.status === 'DONE'
+                    ? '#22c55e'
+                    : m.status === 'REVIEW'
+                      ? '#a855f7'
+                      : ['READY', 'IN_PROGRESS'].includes(m.status)
+                        ? '#f59e0b'
+                        : '#94a3b8';
+                return (
+                  <div className="ms" key={m.id}>
+                    <div className="ms-dot" style={{ background: color }}>
+                      {m.status === 'DONE' ? '✓' : '◆'}
+                    </div>
+                    <div className="ms-name">
+                      {m.type === 'task' ? (
+                        <Link href={`/projects/${project.id}/tasks/${m.id}`}>{m.name}</Link>
+                      ) : (
+                        m.name
+                      )}
+                    </div>
+                    <div className="ms-date">
+                      {m.status === 'DONE'
+                        ? `완료 ${fmtDate(m.completedAt)}`
+                        : `목표 ${fmtDate(m.plannedEnd)}`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="row" style={{ marginBottom: 14 }}>
         {VIEWS.map((v) => (
           <Link
@@ -123,6 +168,9 @@ export default async function ProjectDetailPage({
                 return (
                   <tr key={t.id}>
                     <td>
+                      {t.isMilestone && (
+                        <span style={{ color: '#d97706', fontWeight: 700 }}>◆ </span>
+                      )}
                       <Link href={`/projects/${project.id}/tasks/${t.id}`}>{t.name}</Link>
                       {t.subtasks.length > 0 && (
                         <span className="badge gray" style={{ marginLeft: 6 }}>

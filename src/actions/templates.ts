@@ -79,11 +79,10 @@ export async function deleteTemplate(formData: FormData) {
   const user = await requireUser();
   if (user.role !== 'ADMIN') return;
   const id = String(formData.get('templateId'));
-  const tpl = await prisma.processTemplate.findUnique({
-    where: { id },
-    include: { _count: { select: { projects: true } } },
-  });
-  if (!tpl || tpl.isBuiltIn || tpl._count.projects > 0) return;
+  const tpl = await prisma.processTemplate.findUnique({ where: { id } });
+  // 내장 템플릿은 재시작 시 시드가 다시 생성하므로 삭제 불가.
+  // 프로젝트가 사용 중이어도 프로젝트는 자체 스냅샷을 보유하므로 삭제 가능.
+  if (!tpl || tpl.isBuiltIn) return;
   await prisma.processTemplate.delete({ where: { id } });
   revalidatePath('/templates');
 }

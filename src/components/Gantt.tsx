@@ -6,6 +6,7 @@ type GanttTask = {
   projectId: string;
   name: string;
   status: string;
+  isMilestone?: boolean;
   plannedStart: Date | null;
   plannedEnd: Date | null;
 };
@@ -38,7 +39,8 @@ export function Gantt({ tasks }: { tasks: GanttTask[] }) {
         );
         return (
           <div className="gantt-row" key={t.id}>
-            <div className="gname">
+            <div className="gname" style={t.isMilestone ? { fontWeight: 700 } : undefined}>
+              {t.isMilestone && <span style={{ color: '#d97706' }}>◆ </span>}
               <Link href={`/projects/${t.projectId}/tasks/${t.id}`}>{t.name}</Link>
             </div>
             <div className="gtrack">

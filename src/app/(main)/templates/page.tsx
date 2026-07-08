@@ -67,7 +67,7 @@ export default async function TemplatesPage() {
                             복제
                           </button>
                         </form>
-                        {!t.isBuiltIn && t._count.projects === 0 && (
+                        {!t.isBuiltIn && (
                           <form action={deleteTemplate}>
                             <input type="hidden" name="templateId" value={t.id} />
                             <button className="btn sm danger" type="submit">
@@ -83,6 +83,10 @@ export default async function TemplatesPage() {
             })}
           </tbody>
         </table>
+        <div className="muted mt8">
+          템플릿 이름을 클릭하면 편집기에서 과제 추가·수정·삭제·연결·마일스톤 지정이 가능합니다.
+          템플릿을 삭제해도 이미 생성된 프로젝트는 영향받지 않습니다 (내장 템플릿은 복제 후 수정).
+        </div>
       </div>
     </div>
   );

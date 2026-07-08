@@ -27,6 +27,7 @@ type NodeData = {
   approverType: string;
   companyId: string; // 담당 업체 기본값
   teamName: string; // 담당 팀 기본값
+  isMilestone: boolean; // 핵심 마일스톤/게이트
 };
 
 const TYPE_STYLES: Record<string, React.CSSProperties> = {
@@ -79,7 +80,7 @@ export function FlowEditor({
         id: n.id,
         position: n.position,
         data: {
-          label: displayLabel(n.name, n.type),
+          label: (n.isMilestone ? '◆ ' : '') + displayLabel(n.name, n.type),
           name: n.name,
           nodeType: n.type,
           description: n.description ?? '',
@@ -87,6 +88,7 @@ export function FlowEditor({
           approverType: n.approverType ?? 'HOST_ADMIN',
           companyId: n.defaultCompanyId ?? '',
           teamName: n.defaultTeam ?? '',
+          isMilestone: n.isMilestone ?? false,
         },
         style: nodeStyle(n.type),
       })),
@@ -148,6 +150,7 @@ export function FlowEditor({
           approverType: 'HOST_ADMIN',
           companyId: '',
           teamName: '',
+          isMilestone: false,
         },
         style: nodeStyle(type),
       },
@@ -162,7 +165,7 @@ export function FlowEditor({
       nds.map((n) => {
         if (n.id !== selNodeId) return n;
         const data = { ...n.data, ...patch };
-        data.label = displayLabel(data.name, data.nodeType);
+        data.label = (data.isMilestone ? '◆ ' : '') + displayLabel(data.name, data.nodeType);
         return { ...n, data };
       })
     );
@@ -205,6 +208,7 @@ export function FlowEditor({
         defaultCompanyId:
           n.data.nodeType === 'task' && n.data.companyId ? n.data.companyId : undefined,
         defaultTeam: n.data.nodeType === 'task' && n.data.teamName ? n.data.teamName : undefined,
+        isMilestone: n.data.isMilestone || undefined,
         position: n.position,
       }));
       const outEdges: FlowEdge[] = edges.map((e) => ({
@@ -356,6 +360,18 @@ export function FlowEditor({
                   disabled={readOnly}
                 />
               </label>
+              {selNode.data.nodeType !== 'start' && selNode.data.nodeType !== 'end' && (
+                <label className="fld" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={selNode.data.isMilestone}
+                    onChange={(e) => patchSelNode({ isMilestone: e.target.checked })}
+                    disabled={readOnly}
+                    style={{ width: 'auto' }}
+                  />
+                  <span className="lbl" style={{ margin: 0 }}>◆ 핵심 마일스톤/게이트로 지정</span>
+                </label>
+              )}
               {selNode.data.nodeType === 'task' && (
                 <>
                   <label className="fld">
@@ -462,6 +478,7 @@ export function FlowEditor({
         <table className="tbl">
           <thead>
             <tr>
+              <th style={{ width: 40 }}>M</th>
               <th>과제</th>
               <th>담당 업체</th>
               <th>담당 팀</th>
@@ -486,6 +503,9 @@ export function FlowEditor({
                       background: n.id === selNodeId ? '#eff6ff' : undefined,
                     }}
                   >
+                    <td style={{ color: '#d97706', fontWeight: 700 }}>
+                      {n.data.isMilestone ? '◆' : ''}
+                    </td>
                     <td>{n.data.name}</td>
                     <td>
                       {company ? (

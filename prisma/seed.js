@@ -7,9 +7,9 @@ const prisma = new PrismaClient();
 const NODES = [
   { id: 'n1769756242586_1', name: 'Start', type: 'start', position: { x: 173.87, y: -1012.04 } },
   { id: 'n1769756257321_2', name: '반납 공문/문서 접수', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 3, position: { x: 174.1, y: -824.65 }, description: '협력업체 반납공문 접수' },
-  { id: 'n1769756416785_5', name: '반납 결정 보고 및 승인', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: 173.87, y: -593.28 }, description: '협력사 반납 사유 확인 / 보고\n단순 어려움 호소 및 문제점 해결시 현상 유지' },
+  { id: 'n1769756416785_5', name: '반납 결정 보고 및 승인', type: 'task', taskType: 'WORKLOG', isMilestone: true, approverType: 'HOST_ADMIN', durationDays: 5, position: { x: 173.87, y: -593.28 }, description: '협력사 반납 사유 확인 / 보고\n단순 어려움 호소 및 문제점 해결시 현상 유지' },
   { id: 'n1769756316697_4', name: '협력사 반송 (현상 유지)', type: 'gateway_xor', position: { x: 1870.17, y: -141.07 } },
-  { id: 'n1769759235138_24', name: '이관결정', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 3, position: { x: 174.21, y: -263.85 }, description: '내부 보고 / 승인 완료' },
+  { id: 'n1769759235138_24', name: '이관결정', type: 'task', taskType: 'WORKLOG', isMilestone: true, approverType: 'HOST_ADMIN', durationDays: 3, position: { x: 174.21, y: -263.85 }, description: '내부 보고 / 승인 완료' },
   { id: 'n1769756742064_7', name: '이관 계획 수립', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: -309.38, y: -75.61 }, description: '팀별 계획 수립\n\n양산팀 : 4M / ISIR 일정 수립\n개발팀 : 시사출 일정 수립, 마스터 리스트\n설계팀 : 해당 품목 도면 확보 (2D/3D)\n자재관리팀 : 재고조사 일정 수립 (ASSY, SUB, 부자재, 원자재, 이관대상 납입용기 수량 등)\n영업관리팀 : 신규 업체 선정 계획' },
   { id: 'n1769756778081_8', name: '4M 일정 수립', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: -309.94, y: 95.23 } },
   { id: 'n1769756828616_9', name: '대상 품목 리스트 조사', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: 405.48, y: 165.52 }, description: '납입품목 리스트 (영업관리팀-마감, 자재관리팀 AS 납입부품 확인 필요)' },
@@ -20,7 +20,7 @@ const NODES = [
   { id: 'n1769756987464_13', name: '대상 품목 대차, 납입용기 조사', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: 1298.69, y: 167.16 }, description: '대차, 용기 리스트\n대차, 용기 점검 (수량 및 노후 조사 포함)' },
   { id: 'n1770776557656_3', name: '재고 조사', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: 1549.17, y: 167.85 } },
   { id: 'n1781587400330_3', name: '대여자산 확인', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: -3, y: 161 }, description: '현 보관처 대여자산 리스트 확인 (영업관리팀-공증관련팀)' },
-  { id: 'n1769756655969_6', name: '양산처 선정', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 10, position: { x: 795.32, y: 350.62 }, description: '업체 견적 접수 / 비교 분석\n부품가격 합의서\n업체선정 계약 체결 진행 (모두사인)' },
+  { id: 'n1769756655969_6', name: '양산처 선정', type: 'task', taskType: 'WORKLOG', isMilestone: true, approverType: 'HOST_ADMIN', durationDays: 10, position: { x: 795.32, y: 350.62 }, description: '업체 견적 접수 / 비교 분석\n부품가격 합의서\n업체선정 계약 체결 진행 (모두사인)' },
   { id: 'n1769757171255_14', name: '이관 진행', type: 'gateway_parallel', position: { x: 184.42, y: 474.92 } },
   { id: 'n1769757231623_15', name: '품질 확보', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 15, position: { x: -30.09, y: 611.84 }, description: '선정 협력사 육성\n제품 육성\n제품 T/O' },
   { id: 'n1769757268487_16', name: '재고 확보', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 10, position: { x: 173.29, y: 612.31 }, description: '이관 시점 전후 안전재고 확보\n(안전 재고 확보를 위한 SUB 원재료, 부품, 납입용기 확인 필요)' },
@@ -28,8 +28,8 @@ const NODES = [
   { id: 'n1769757298870_18', name: '잔여 원자재 이동 外', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: 654.39, y: 616.99 }, description: '1. 반납업체 잔여 원재료\n2. 반제품 확인\n3. SUB 품목 확인' },
   { id: 'n1770776323354_1', name: 'AS 납입지 변경', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 3, position: { x: 924.86, y: 480.03 }, description: '해당 시 (동일 지역이면 해당 없음)' },
   { id: 'n1770776413601_2', name: '납입지 변경 대상 확인', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 3, position: { x: 924.53, y: 617.63 }, description: '변경 협력사가 동일 지역이면 해당 없음' },
-  { id: 'n1769757364638_19', name: '이관 완료', type: 'gateway_parallel', position: { x: 184.29, y: 788.58 } },
-  { id: 'n1769757392583_20', name: '완료 보고', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 3, position: { x: 183.67, y: 934.47 } },
+  { id: 'n1769757364638_19', name: '이관 완료', type: 'gateway_parallel', isMilestone: true, position: { x: 184.29, y: 788.58 } },
+  { id: 'n1769757392583_20', name: '완료 보고', type: 'task', taskType: 'WORKLOG', isMilestone: true, approverType: 'HOST_ADMIN', durationDays: 3, position: { x: 183.67, y: 934.47 } },
   { id: 'n1769757412086_21', name: '대여자산공증 실시', type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', durationDays: 5, position: { x: 184.16, y: 1038.17 } },
   { id: 'n1769757443654_22', name: 'End', type: 'end', position: { x: 1871.31, y: 1397.85 } },
 ];
@@ -155,6 +155,20 @@ async function main() {
       },
     });
     console.log(`관리자 계정 생성: ${adminId}`);
+  }
+
+  // 기존 내장 템플릿에 마일스톤 지정이 전혀 없으면 1회 기본 지정
+  const MILESTONE_NAMES = ['반납 결정 보고 및 승인', '이관결정', '양산처 선정', '이관 완료', '완료 보고'];
+  const builtins = await prisma.processTemplate.findMany({ where: { isBuiltIn: true } });
+  for (const t of builtins) {
+    const nodes = t.nodes;
+    if (Array.isArray(nodes) && !nodes.some((n) => n.isMilestone)) {
+      const updated = nodes.map((n) =>
+        MILESTONE_NAMES.includes(n.name) ? { ...n, isMilestone: true } : n
+      );
+      await prisma.processTemplate.update({ where: { id: t.id }, data: { nodes: updated } });
+      console.log('내장 템플릿 마일스톤 기본 지정');
+    }
   }
 
   const templateName = '외주 협력업체 생산처 변경 (반납 접수)';
