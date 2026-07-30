@@ -186,6 +186,152 @@ async function main() {
     });
     console.log('내장 프로세스 템플릿 생성 완료');
   }
+
+  await seedAX1(host);
+}
+
+
+// ───────────────── AX1 EV 사출양산처 변경 (신양기업 반납) ─────────────────
+const AX1_ITEMS = [
+  '영업관리팀 : STD CVM01859 863CB-GX000 COVER-CHARGE DOOR INNER (STD/DC COMBO) — 아이앤테크(주) / 신양기업 → 신성화학',
+  '영업관리팀 : OPT CVM01860 863CB-GX300 COVER-CHARGE DOOR INNER (OPT/DC COMBO) — 아이앤테크(주) / 신양기업 → 신성화학',
+  '영업관리팀 : CR CVM01986 863CB-GX700 COVER-CHARGE DOOR INNER (DC COMBO) — (주)현태금형 / 신양기업 → 신성화학',
+  '영업관리팀 : JPN CVM01861 863CB-GX500 COVER-CHARGE DOOR INNER (STD/CHADEMO) — 아이앤테크(주) / 신양기업 → 신성화학',
+  '영업관리팀 : CR JPN CVM01987 863CB-GX900 COVER-CHARGE DOOR INNER (CHADEMO) — (주)현태금형 / 신양기업 → 신성화학',
+  '영업관리팀 : CVM01862 863CD-GX000 HOUSING-CHARGE DR (DC COMBO) — 아이앤테크(주) / 신양기업 → G금강',
+  '영업관리팀 : CR CVM01988 863CD-GX700 HOUSING-CHARGE DR (DC COMBO) — (주)현태금형 / 신양기업 → G금강',
+  '영업관리팀 : JPN CVM01863 863CD-GX200 HOUSING-CHARGE DR (CHADEMO) — 아이앤테크(주) / 신양기업 → G금강',
+  '영업관리팀 : CR JPN CVM01989 863CD-GX900 HOUSING-CHARGE DR (CHADEMO) — (주)현태금형 / 신양기업 → G금강',
+  '영업관리팀 : CVM01864 863CE-GX000 GOOSE NECK (DC COMBO) — 아이앤테크(주) / 신양기업 → G금강',
+  '영업관리팀 : CR CVM01990 863CE-GX700 GOOSE NECK (DC COMBO) — (주)현태금형 / 신양기업 → G금강',
+  '영업관리팀 : JPN CVM01865 863CE-GX200 GOOSE NECK (CHADEMO) — 아이앤테크(주) / 신양기업 → G금강',
+  '영업관리팀 : CR JPN CVM01991 863CE-GX900 GOOSE NECK (CHADEMO) — (주)현태금형 / 신양기업 → G금강',
+];
+
+function ax1Nodes(hostId) {
+  const t = (o) => ({ type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', defaultCompanyId: hostId, ...o });
+  return [
+    { id: 'ax1_start', name: 'Start', type: 'start', position: { x: 0, y: -120 } },
+    t({ id: 'ax1_notify', name: '라도 사전 통보', defaultTeam: '영업관리팀', durationDays: 1, position: { x: 0, y: 0 }, description: 'AX1 EV 사출양산처 변경 사전 통보 (7/30)\n협력사 반납 요청 수용, 양산라인 공백 없는 운영 목적' }),
+    t({ id: 'ax1_letter', name: '고객사 공문 발송', isMilestone: true, defaultTeam: '함평팀', durationDays: 13, position: { x: 0, y: 120 }, description: '고객사 공문 발송 (목표 8/13)' }),
+    t({ id: 'ax1_to_plan', name: 'T/O 계획 수립', isMilestone: true, defaultTeam: '함평팀', durationDays: 8, position: { x: 0, y: 240 }, description: '협력사(신성화학/G금강) T/O 계획 수립 (목표 8/21)' }),
+    { id: 'ax1_g1', name: '검증 진행', type: 'gateway_parallel', position: { x: 0, y: 360 } },
+    t({ id: 'ax1_issues', name: '이슈사항 검토/해결', defaultTeam: '함평팀', durationDays: 30, position: { x: -320, y: 480 }, description: '함평팀 : 도장 박리 현상 확인/대응\n영업관리팀 : 신양기업 터치업 지속 가능 유무 확인 (지속 시 비용 상승 금액 확인)\n함평팀 : 제품 품확 평가 후 터치업 삭제 검토\n함평팀 : 도장 적용 시 품질 악조건 검토\n함평팀 : 구즈넥/이너커버/하우징 터치업 적용 확인' }),
+    t({ id: 'ax1_items', name: '대상 품목/금형 확인 (13품목)', defaultTeam: '영업관리팀', durationDays: 10, position: { x: 320, y: 480 }, description: AX1_ITEMS.join('\n') }),
+    t({ id: 'ax1_quality', name: '제품품확 (2회 육성)', isMilestone: true, defaultTeam: '함평팀', durationDays: 61, position: { x: 0, y: 480 }, description: '제품 품확 2회 육성 (목표 10/21)' }),
+    t({ id: 'ax1_cust_check', name: '고객사 제품 점검', defaultTeam: '함평팀', durationDays: 2, position: { x: 0, y: 600 }, description: '고객사 제품 점검 (목표 10/23)' }),
+    { id: 'ax1_g2', name: '시험·점검 병렬', type: 'gateway_parallel', position: { x: 0, y: 720 } },
+    t({ id: 'ax1_rel1', name: '제품신뢰성 시험 (내후 포함)', defaultTeam: '함평팀', durationDays: 7, position: { x: -450, y: 840 }, description: '목표 10/30한' }),
+    t({ id: 'ax1_rel2', name: '제품신뢰성 시험 (내후 제외)', defaultTeam: '함평팀', durationDays: 7, position: { x: -150, y: 840 }, description: '목표 10/30한' }),
+    t({ id: 'ax1_self_insp', name: '자체 공정점검', defaultTeam: '함평팀', durationDays: 7, position: { x: 150, y: 840 }, description: '목표 10/30한' }),
+    t({ id: 'ax1_cust_insp', name: '고객사 공정점검', defaultTeam: '함평팀', durationDays: 7, position: { x: 450, y: 840 }, description: '목표 10/30한' }),
+    { id: 'ax1_g3', name: '검증 완료', type: 'gateway_parallel', isMilestone: true, position: { x: 0, y: 960 } },
+    t({ id: 'ax1_isir', name: 'ISIR 서류 제출', isMilestone: true, defaultTeam: '함평팀', durationDays: 1, position: { x: -160, y: 1080 }, description: 'ISIR 서류 제출 (목표 10/31)' }),
+    t({ id: 'ax1_stock', name: '재고 확보', defaultTeam: '자재관리팀', durationDays: 7, position: { x: 160, y: 1080 }, description: '이관 시점 전후 안전재고 확보 (D+7)\n자재관리팀 : 납입용기 확인\n자재관리팀 : 잔여재고 관리\n자재관리팀 : 잔여 원소재 확인' }),
+    { id: 'ax1_g4', name: '이관 준비 완료', type: 'gateway_parallel', position: { x: 0, y: 1200 } },
+    t({ id: 'ax1_done', name: '이관 완료 보고', isMilestone: true, defaultTeam: '함평팀', durationDays: 1, position: { x: 0, y: 1320 }, description: '이관 완료 보고 (목표 11/1)' }),
+    { id: 'ax1_end', name: 'End', type: 'end', position: { x: 0, y: 1440 } },
+  ];
+}
+
+const AX1_EDGES = [
+  ['ax1_start', 'ax1_notify'], ['ax1_notify', 'ax1_letter'], ['ax1_letter', 'ax1_to_plan'],
+  ['ax1_to_plan', 'ax1_g1'],
+  ['ax1_g1', 'ax1_issues'], ['ax1_g1', 'ax1_items'], ['ax1_g1', 'ax1_quality'],
+  ['ax1_quality', 'ax1_cust_check'], ['ax1_cust_check', 'ax1_g2'],
+  ['ax1_g2', 'ax1_rel1'], ['ax1_g2', 'ax1_rel2'], ['ax1_g2', 'ax1_self_insp'], ['ax1_g2', 'ax1_cust_insp'],
+  ['ax1_rel1', 'ax1_g3'], ['ax1_rel2', 'ax1_g3'], ['ax1_self_insp', 'ax1_g3'], ['ax1_cust_insp', 'ax1_g3'],
+  ['ax1_issues', 'ax1_g3'], ['ax1_items', 'ax1_g3'],
+  ['ax1_g3', 'ax1_isir'], ['ax1_g3', 'ax1_stock'],
+  ['ax1_isir', 'ax1_g4'], ['ax1_stock', 'ax1_g4'],
+  ['ax1_g4', 'ax1_done'], ['ax1_done', 'ax1_end'],
+].map(([s2, t2], i) => ({ id: 'ax1_e' + (i + 1), source: s2, target: t2 }));
+
+// 최장 경로 기반 일정 산출 (엔진과 동일 로직)
+function ax1Schedule(nodes, edges, startDate) {
+  const dur = (n) => (n.type === 'task' ? Math.max(0, n.durationDays ?? 5) : 0);
+  const est = new Map(nodes.map((n) => [n.id, 0]));
+  for (let i = 0; i <= edges.length; i++) {
+    let moved = false;
+    for (const e of edges) {
+      const src = nodes.find((n) => n.id === e.source);
+      if (!src) continue;
+      const cand = (est.get(e.source) ?? 0) + dur(src);
+      if (cand > (est.get(e.target) ?? 0)) { est.set(e.target, cand); moved = true; }
+    }
+    if (!moved) break;
+  }
+  const day = 86400000;
+  const out = new Map();
+  for (const n of nodes) {
+    const s2 = new Date(startDate.getTime() + (est.get(n.id) ?? 0) * day);
+    out.set(n.id, { plannedStart: s2, plannedEnd: new Date(s2.getTime() + dur(n) * day) });
+  }
+  return out;
+}
+
+async function seedAX1(host) {
+  // 관련 협력사 등록
+  for (const name of ['신양기업', '신성화학', 'G금강']) {
+    await prisma.company.upsert({ where: { name }, update: {}, create: { name, status: 'ACTIVE' } });
+  }
+
+  const tplName = 'AX1 EV 사출양산처 변경 (신양기업 반납)';
+  let tpl = await prisma.processTemplate.findFirst({ where: { name: tplName } });
+  const nodes = ax1Nodes(host.id);
+  if (!tpl) {
+    tpl = await prisma.processTemplate.create({
+      data: {
+        name: tplName,
+        description: 'AX1 EV 양산 사출양산처 변경 — 신양기업 반납, 신성화학/G금강 이관 (26.07.30 회의, 1안 기준)',
+        estimatedDays: 95,
+        isBuiltIn: true,
+        nodes,
+        edges: AX1_EDGES,
+      },
+    });
+    console.log('AX1 템플릿 생성');
+  }
+
+  const projName = 'AX1 EV 사출양산처 변경 (신양기업 → 신성화학/G금강)';
+  const exists = await prisma.project.findFirst({ where: { name: projName } });
+  if (exists) return;
+
+  const startDate = new Date('2026-07-30T00:00:00');
+  const sched = ax1Schedule(nodes, AX1_EDGES, startDate);
+  await prisma.project.create({
+    data: {
+      name: projName,
+      description: '대상 13품목 (COVER-CHARGE DOOR INNER / HOUSING-CHARGE DR / GOOSE NECK) · 현보관처 신양기업 → 변경업체 신성화학·G금강 · 1안(기존 원소재 유지/터치업 유지) 기준',
+      startDate,
+      templateId: tpl.id,
+      nodes,
+      edges: AX1_EDGES,
+      tasks: {
+        create: nodes.map((n) => {
+          const sc = sched.get(n.id);
+          const isStart = n.type === 'start';
+          const firstReady = n.id === 'ax1_notify'; // 시작 직후 진행 가능
+          return {
+            nodeId: n.id,
+            name: n.name,
+            type: n.type,
+            taskType: n.taskType ?? null,
+            description: n.description ?? null,
+            isMilestone: n.isMilestone ?? false,
+            approverType: n.approverType ?? 'HOST_ADMIN',
+            assignedCompanyId: n.defaultCompanyId ?? null,
+            assignedTeam: n.defaultTeam ?? null,
+            status: isStart ? 'DONE' : firstReady ? 'READY' : 'WAITING',
+            completedAt: isStart ? new Date() : null,
+            plannedStart: sc ? sc.plannedStart : null,
+            plannedEnd: sc ? sc.plannedEnd : null,
+          };
+        }),
+      },
+    },
+  });
+  console.log('AX1 프로젝트 생성 (시작일 2026-07-30, 과제 ' + nodes.length + '건)');
 }
 
 main()
