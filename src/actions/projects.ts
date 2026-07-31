@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { advanceProject, scheduleDates } from '@/lib/engine';
+import { notifyUsers } from '@/lib/notify';
 import type { FlowEdge, FlowNode } from '@/lib/flow-types';
 
 export async function createProject(formData: FormData) {
@@ -70,6 +71,43 @@ export async function createProject(formData: FormData) {
   await advanceProject(project.id);
   revalidatePath('/projects');
   redirect(`/projects/${project.id}`);
+}
+
+/** 프로젝트 협의 스레드에 메시지 등록 — 관련자 전체에게 알림 */
+export async function addProjectComment(formData: FormData) {
+  const user = await requireUser();
+  const projectId = String(formData.get('projectId') || '');
+  const content = String(formData.get('content') || '').trim();
+  if (!projectId || !content) return;
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      tasks: { select: { assigneeId: true } },
+      comments: { select: { authorId: true } },
+    },
+  });
+  if (!project) return;
+
+  await prisma.projectComment.create({
+    data: { projectId, authorId: user.id, content },
+  });
+
+  // 알림 대상: 과제 담당자 + 기존 협의 참여자 + 캠스 관리자 (작성자 제외)
+  const targets = new Set<string>();
+  project.tasks.forEach((t) => t.assigneeId && targets.add(t.assigneeId));
+  project.comments.forEach((c) => targets.add(c.authorId));
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN', status: 'ACTIVE' },
+    select: { id: true },
+  });
+  admins.forEach((a) => targets.add(a.id));
+  targets.delete(user.id);
+  await notifyUsers(
+    Array.from(targets),
+    `프로젝트 협의: ${project.name} — ${user.name}`,
+    `/projects/${projectId}?view=talk`
+  );
+  revalidatePath(`/projects/${projectId}`);
 }
 
 export async function cancelProject(formData: FormData) {

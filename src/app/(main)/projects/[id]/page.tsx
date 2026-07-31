@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { cancelProject } from '@/actions/projects';
-import { fmtDate, daysLeft, isOverdue, PROJECT_STATUS_LABELS } from '@/lib/format';
+import { cancelProject, addProjectComment } from '@/actions/projects';
+import { fmtDate, fmtDateTime, daysLeft, isOverdue, PROJECT_STATUS_LABELS } from '@/lib/format';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Gantt } from '@/components/Gantt';
 import { Kanban } from '@/components/Kanban';
@@ -15,6 +15,7 @@ const VIEWS = [
   { key: 'gantt', label: '간트차트' },
   { key: 'kanban', label: '칸반' },
   { key: 'flow', label: '프로세스 흐름' },
+  { key: 'talk', label: '💬 협의' },
 ];
 
 export default async function ProjectDetailPage({
@@ -42,6 +43,37 @@ export default async function ProjectDetailPage({
     },
   });
   if (!project) notFound();
+
+  // 협의 탭 데이터 (스레드 + 최근 활동)
+  const [talkComments, recentWorklogs, recentTaskComments] =
+    view === 'talk'
+      ? await Promise.all([
+          prisma.projectComment.findMany({
+            where: { projectId: project.id },
+            include: { author: { include: { company: true } } },
+            orderBy: { createdAt: 'asc' },
+            take: 200,
+          }),
+          prisma.worklog.findMany({
+            where: { task: { projectId: project.id } },
+            include: {
+              author: { include: { company: true } },
+              task: { select: { id: true, name: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          }),
+          prisma.comment.findMany({
+            where: { task: { projectId: project.id } },
+            include: {
+              author: { include: { company: true } },
+              task: { select: { id: true, name: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          }),
+        ])
+      : [[], [], []];
 
   const workTasks = project.tasks.filter((t) => t.type === 'task');
   const done = workTasks.filter((t) => t.status === 'DONE').length;
@@ -213,6 +245,89 @@ export default async function ProjectDetailPage({
       )}
 
       {view === 'kanban' && <Kanban tasks={workTasks} />}
+
+      {view === 'talk' && (
+        <div className="grid-2">
+          <div className="card">
+            <h2>프로젝트 협의 스레드</h2>
+            <div className="muted" style={{ marginBottom: 10 }}>
+              참여 업체 전체가 함께 보는 공용 협의 공간입니다. 메시지를 남기면 과제 담당자·협의
+              참여자·캠스 관리자에게 알림이 갑니다.
+            </div>
+            {talkComments.length === 0 ? (
+              <div className="muted" style={{ marginBottom: 12 }}>
+                아직 협의 내용이 없습니다. 첫 메시지를 남겨보세요.
+              </div>
+            ) : (
+              <div style={{ maxHeight: 480, overflowY: 'auto', marginBottom: 12 }}>
+                {talkComments.map((c) => (
+                  <div className="wlog" key={c.id}>
+                    <div className="whead">
+                      <b>{c.author.name}</b> ({c.author.company.name}) · {fmtDateTime(c.createdAt)}
+                    </div>
+                    <div className="wbody">{c.content}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {project.status === 'ACTIVE' && (
+              <form action={addProjectComment}>
+                <input type="hidden" name="projectId" value={project.id} />
+                <label className="fld">
+                  <textarea
+                    name="content"
+                    required
+                    placeholder="협의 내용, 결정 사항, 요청 사항을 남겨 공유하세요."
+                  />
+                </label>
+                <button className="btn" type="submit">
+                  메시지 등록
+                </button>
+              </form>
+            )}
+          </div>
+
+          <div className="card">
+            <h2>최근 활동 (과제 일지·댓글)</h2>
+            {(() => {
+              const feed = [
+                ...recentWorklogs.map((w) => ({
+                  kind: '일지',
+                  at: w.createdAt,
+                  author: w.author,
+                  task: w.task,
+                  content: w.content,
+                })),
+                ...recentTaskComments.map((c) => ({
+                  kind: '댓글',
+                  at: c.createdAt,
+                  author: c.author,
+                  task: c.task,
+                  content: c.content,
+                })),
+              ]
+                .sort((a, b) => b.at.getTime() - a.at.getTime())
+                .slice(0, 15);
+              if (feed.length === 0)
+                return <div className="muted">아직 과제 활동이 없습니다.</div>;
+              return feed.map((f, i) => (
+                <div className="comment" key={i}>
+                  <div style={{ flex: 1 }}>
+                    <span className="cmeta">
+                      <span className={`badge ${f.kind === '일지' ? 'blue' : 'gray'}`}>{f.kind}</span>{' '}
+                      <Link href={`/projects/${project.id}/tasks/${f.task.id}`}>{f.task.name}</Link>{' '}
+                      · <b>{f.author.name}</b> ({f.author.company.name}) · {fmtDateTime(f.at)}
+                    </span>
+                    <div style={{ whiteSpace: 'pre-wrap' }}>
+                      {f.content.length > 120 ? f.content.slice(0, 120) + '…' : f.content}
+                    </div>
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
 
       {view === 'flow' && (
         <FlowViewer
