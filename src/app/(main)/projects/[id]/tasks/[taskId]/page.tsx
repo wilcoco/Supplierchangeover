@@ -294,6 +294,7 @@ export default async function TaskDetailPage({
                         id: c.id,
                         name: c.name,
                         isHost: c.isHost,
+                        teams: c.teams,
                       }))}
                       users={allUsers.map((u) => ({
                         id: u.id,
