@@ -251,8 +251,9 @@ export default async function ProjectDetailPage({
           <div className="card">
             <h2>프로젝트 협의 스레드</h2>
             <div className="muted" style={{ marginBottom: 10 }}>
-              참여 업체 전체가 함께 보는 공용 협의 공간입니다. 메시지를 남기면 과제 담당자·협의
-              참여자·캠스 관리자에게 알림이 갑니다.
+              참여 업체 전체가 함께 보는 공용 협의 공간입니다. 메시지를 남기면 이 프로젝트 과제에
+              배정된 담당 업체의 사용자 전원과 승인 담당자·협의 참여자·캠스 관리자에게 알림이
+              갑니다. (담당 배정이 아직 없으면 캠스 관리자에게 갑니다)
             </div>
             {talkComments.length === 0 ? (
               <div className="muted" style={{ marginBottom: 12 }}>

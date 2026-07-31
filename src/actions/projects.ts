@@ -82,7 +82,7 @@ export async function addProjectComment(formData: FormData) {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
-      tasks: { select: { assigneeId: true } },
+      tasks: { select: { assigneeId: true, approverUserId: true, assignedCompanyId: true } },
       comments: { select: { authorId: true } },
     },
   });
@@ -92,15 +92,24 @@ export async function addProjectComment(formData: FormData) {
     data: { projectId, authorId: user.id, content },
   });
 
-  // 알림 대상: 과제 담당자 + 기존 협의 참여자 + 캠스 관리자 (작성자 제외)
+  // 알림 대상: 과제 담당자 + 승인 담당자 + 담당 업체 소속 사용자 전원
+  //          + 기존 협의 참여자 + 캠스 관리자 (작성자 제외)
   const targets = new Set<string>();
-  project.tasks.forEach((t) => t.assigneeId && targets.add(t.assigneeId));
+  const companyIds = new Set<string>();
+  project.tasks.forEach((t) => {
+    if (t.assigneeId) targets.add(t.assigneeId);
+    if (t.approverUserId) targets.add(t.approverUserId);
+    if (t.assignedCompanyId) companyIds.add(t.assignedCompanyId);
+  });
   project.comments.forEach((c) => targets.add(c.authorId));
-  const admins = await prisma.user.findMany({
-    where: { role: 'ADMIN', status: 'ACTIVE' },
+  const participants = await prisma.user.findMany({
+    where: {
+      status: 'ACTIVE',
+      OR: [{ role: 'ADMIN' }, { companyId: { in: Array.from(companyIds) } }],
+    },
     select: { id: true },
   });
-  admins.forEach((a) => targets.add(a.id));
+  participants.forEach((p) => targets.add(p.id));
   targets.delete(user.id);
   await notifyUsers(
     Array.from(targets),
