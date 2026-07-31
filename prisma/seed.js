@@ -188,6 +188,7 @@ async function main() {
   }
 
   await seedAX1(host);
+  await seedAX2(host);
 }
 
 
@@ -332,6 +333,65 @@ async function seedAX1(host) {
     },
   });
   console.log('AX1 프로젝트 생성 (시작일 2026-07-30, 과제 ' + nodes.length + '건)');
+}
+
+
+// ───────────── AX1 EV 사출양산처 변경 2안 (원소재 변경/터치업 삭제) ─────────────
+function ax2Nodes(hostId) {
+  const t = (o) => ({ type: 'task', taskType: 'WORKLOG', approverType: 'HOST_ADMIN', defaultCompanyId: hostId, ...o });
+  return [
+    { id: 'ax2_start', name: 'Start', type: 'start', position: { x: 0, y: -120 } },
+    t({ id: 'ax2_notify', name: '라도 사전 통보', defaultTeam: '영업관리팀', durationDays: 1, position: { x: 0, y: 0 }, description: 'AX1 EV 사출양산처 변경 사전 통보 (7/30) — 2안: 원소재 변경 / 터치업 삭제' }),
+    t({ id: 'ax2_letter', name: '고객사 공문 발송', isMilestone: true, defaultTeam: '함평팀', durationDays: 13, position: { x: 0, y: 120 }, description: '고객사 공문 발송 (목표 8/13)' }),
+    t({ id: 'ax2_to_plan', name: 'T/O 계획 수립', isMilestone: true, defaultTeam: '함평팀', durationDays: 8, position: { x: 0, y: 240 }, description: '협력사(신성화학/G금강) T/O 계획 수립 (목표 8/21)\n1안 기준 T/O 진행 시 외관 및 개선 T/O 동시 진행' }),
+    { id: 'ax2_g1', name: '검증 진행', type: 'gateway_parallel', position: { x: 0, y: 360 } },
+    t({ id: 'ax2_onyu', name: '온유기 구입', defaultTeam: '개발팀', durationDays: 45, position: { x: -480, y: 480 }, description: '개발팀 : 원소재 변경에 따른 온유기 구입 필요' }),
+    t({ id: 'ax2_issues', name: '이슈사항 검토/해결', defaultTeam: '함평팀', durationDays: 30, position: { x: -320, y: 600 }, description: '함평팀 : 원소재 변경 검증 계획 수립\n함평팀 : 터치업 삭제에 따른 외관 품질 확인\n영업관리팀 : 원소재 변경 비용 영향 확인' }),
+    t({ id: 'ax2_items', name: '대상 품목/금형 확인 (13품목)', defaultTeam: '영업관리팀', durationDays: 10, position: { x: 320, y: 480 }, description: AX1_ITEMS.join('\n') }),
+    t({ id: 'ax2_quality', name: '제품품확 (2회 육성)', isMilestone: true, defaultTeam: '함평팀', durationDays: 61, position: { x: 0, y: 480 }, description: '제품 품확 2회 육성 (목표 10/21)' }),
+    t({ id: 'ax2_cust_check', name: '고객사 제품 점검', defaultTeam: '함평팀', durationDays: 2, position: { x: 0, y: 600 }, description: '고객사 제품 점검 (목표 10/23)' }),
+    { id: 'ax2_g2', name: '시험·점검 병렬', type: 'gateway_parallel', position: { x: 0, y: 720 } },
+    t({ id: 'ax2_rel1', name: '제품신뢰성 시험 (내후 포함)', defaultTeam: '함평팀', durationDays: 62, position: { x: -450, y: 840 }, description: '목표 12/24한 (원소재 변경 검증 포함)' }),
+    t({ id: 'ax2_rel2', name: '제품신뢰성 시험 (내후 제외)', defaultTeam: '함평팀', durationDays: 62, position: { x: -150, y: 840 }, description: '목표 12/24한' }),
+    t({ id: 'ax2_self_insp', name: '자체 공정점검', defaultTeam: '함평팀', durationDays: 62, position: { x: 150, y: 840 }, description: '목표 12/24한' }),
+    t({ id: 'ax2_cust_insp', name: '고객사 공정점검', defaultTeam: '함평팀', durationDays: 69, position: { x: 450, y: 840 }, description: '목표 12/31' }),
+    { id: 'ax2_g3', name: '검증 완료', type: 'gateway_parallel', isMilestone: true, position: { x: 0, y: 960 } },
+    t({ id: 'ax2_isir', name: 'ISIR 서류 제출', isMilestone: true, defaultTeam: '함평팀', durationDays: 10, position: { x: -160, y: 1080 }, description: 'ISIR 서류 제출 (목표 27.1/10)' }),
+    t({ id: 'ax2_stock', name: '재고 확보', defaultTeam: '자재관리팀', durationDays: 7, position: { x: 160, y: 1080 }, description: '이관 시점 전후 안전재고 확보 (D+7)\n자재관리팀 : 납입용기 확인\n자재관리팀 : 잔여재고 관리\n자재관리팀 : 잔여 원소재 확인' }),
+    { id: 'ax2_g4', name: '이관 준비 완료', type: 'gateway_parallel', position: { x: 0, y: 1200 } },
+    t({ id: 'ax2_done', name: '이관 완료 보고', isMilestone: true, defaultTeam: '함평팀', durationDays: 5, position: { x: 0, y: 1320 }, description: '이관 완료 보고 (목표 27.1/15)' }),
+    { id: 'ax2_end', name: 'End', type: 'end', position: { x: 0, y: 1440 } },
+  ];
+}
+
+const AX2_EDGES = [
+  ['ax2_start', 'ax2_notify'], ['ax2_notify', 'ax2_letter'], ['ax2_letter', 'ax2_to_plan'],
+  ['ax2_to_plan', 'ax2_g1'],
+  ['ax2_g1', 'ax2_onyu'], ['ax2_g1', 'ax2_issues'], ['ax2_g1', 'ax2_items'], ['ax2_g1', 'ax2_quality'],
+  ['ax2_quality', 'ax2_cust_check'], ['ax2_cust_check', 'ax2_g2'],
+  ['ax2_g2', 'ax2_rel1'], ['ax2_g2', 'ax2_rel2'], ['ax2_g2', 'ax2_self_insp'], ['ax2_g2', 'ax2_cust_insp'],
+  ['ax2_rel1', 'ax2_g3'], ['ax2_rel2', 'ax2_g3'], ['ax2_self_insp', 'ax2_g3'], ['ax2_cust_insp', 'ax2_g3'],
+  ['ax2_onyu', 'ax2_g3'], ['ax2_issues', 'ax2_g3'], ['ax2_items', 'ax2_g3'],
+  ['ax2_g3', 'ax2_isir'], ['ax2_g3', 'ax2_stock'],
+  ['ax2_isir', 'ax2_g4'], ['ax2_stock', 'ax2_g4'],
+  ['ax2_g4', 'ax2_done'], ['ax2_done', 'ax2_end'],
+].map(([s2, t2], i) => ({ id: 'ax2_e' + (i + 1), source: s2, target: t2 }));
+
+async function seedAX2(host) {
+  const tplName = 'AX1 EV 사출양산처 변경 2안 (원소재 변경/터치업 삭제)';
+  const exists = await prisma.processTemplate.findFirst({ where: { name: tplName } });
+  if (exists) return;
+  await prisma.processTemplate.create({
+    data: {
+      name: tplName,
+      description: 'AX1 EV 2안 — 원소재 변경/터치업 삭제 기준. 신뢰성시험 12/24한, 고객사 공정점검 12/31, ISIR 27.1/10, 이관완료 27.1/15. 온유기 구입(개발팀) 필요.',
+      estimatedDays: 170,
+      isBuiltIn: true,
+      nodes: ax2Nodes(host.id),
+      edges: AX2_EDGES,
+    },
+  });
+  console.log('AX1 2안 템플릿 생성');
 }
 
 main()
