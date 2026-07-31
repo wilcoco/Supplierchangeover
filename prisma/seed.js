@@ -379,19 +379,61 @@ const AX2_EDGES = [
 
 async function seedAX2(host) {
   const tplName = 'AX1 EV 사출양산처 변경 2안 (원소재 변경/터치업 삭제)';
-  const exists = await prisma.processTemplate.findFirst({ where: { name: tplName } });
+  const nodes = ax2Nodes(host.id);
+  let tpl = await prisma.processTemplate.findFirst({ where: { name: tplName } });
+  if (!tpl) {
+    tpl = await prisma.processTemplate.create({
+      data: {
+        name: tplName,
+        description: 'AX1 EV 2안 — 원소재 변경/터치업 삭제 기준. 신뢰성시험 12/24한, 고객사 공정점검 12/31, ISIR 27.1/10, 이관완료 27.1/15. 온유기 구입(개발팀) 필요.',
+        estimatedDays: 170,
+        isBuiltIn: true,
+        nodes,
+        edges: AX2_EDGES,
+      },
+    });
+    console.log('AX1 2안 템플릿 생성');
+  }
+
+  const projName = 'AX1 EV 사출양산처 변경 2안 (신양기업 → 신성화학/G금강)';
+  const exists = await prisma.project.findFirst({ where: { name: projName } });
   if (exists) return;
-  await prisma.processTemplate.create({
+
+  const startDate = new Date('2026-07-30T00:00:00');
+  const sched = ax1Schedule(nodes, AX2_EDGES, startDate);
+  await prisma.project.create({
     data: {
-      name: tplName,
-      description: 'AX1 EV 2안 — 원소재 변경/터치업 삭제 기준. 신뢰성시험 12/24한, 고객사 공정점검 12/31, ISIR 27.1/10, 이관완료 27.1/15. 온유기 구입(개발팀) 필요.',
-      estimatedDays: 170,
-      isBuiltIn: true,
-      nodes: ax2Nodes(host.id),
+      name: projName,
+      description: '2안(원소재 변경/터치업 삭제) 기준 · 대상 13품목 · 신양기업 → 신성화학·G금강 · 온유기 구입(개발팀) 포함 · ISIR 27.1/10, 이관완료 27.1/15 목표',
+      startDate,
+      templateId: tpl.id,
+      nodes,
       edges: AX2_EDGES,
+      tasks: {
+        create: nodes.map((n) => {
+          const sc = sched.get(n.id);
+          const isStart = n.type === 'start';
+          const firstReady = n.id === 'ax2_notify';
+          return {
+            nodeId: n.id,
+            name: n.name,
+            type: n.type,
+            taskType: n.taskType ?? null,
+            description: n.description ?? null,
+            isMilestone: n.isMilestone ?? false,
+            approverType: n.approverType ?? 'HOST_ADMIN',
+            assignedCompanyId: n.defaultCompanyId ?? null,
+            assignedTeam: n.defaultTeam ?? null,
+            status: isStart ? 'DONE' : firstReady ? 'READY' : 'WAITING',
+            completedAt: isStart ? new Date() : null,
+            plannedStart: sc ? sc.plannedStart : null,
+            plannedEnd: sc ? sc.plannedEnd : null,
+          };
+        }),
+      },
     },
   });
-  console.log('AX1 2안 템플릿 생성');
+  console.log('AX1 2안 프로젝트 생성 (시작일 2026-07-30, 과제 ' + nodes.length + '건)');
 }
 
 main()
