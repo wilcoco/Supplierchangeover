@@ -298,7 +298,9 @@ export default async function TaskDetailPage({
                       users={allUsers.map((u) => ({
                         id: u.id,
                         name: u.name,
+                        companyId: u.companyId,
                         companyName: u.company.name,
+                        team: u.team,
                       }))}
                       currentType={task.approverType}
                       currentCompanyId={task.approverCompanyId}
