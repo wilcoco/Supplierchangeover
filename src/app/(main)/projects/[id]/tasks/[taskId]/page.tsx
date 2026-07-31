@@ -73,7 +73,7 @@ export default async function TaskDetailPage({
 
   const approverLabel =
     task.approverType === 'HOST_ADMIN'
-      ? '캠스 관리자'
+      ? '승인 담당자 미지정 — 캠스 관리자 승인(백업)'
       : task.approverType === 'COMPANY_ADMIN'
         ? `담당 업체 회사 관리자${task.assignedCompany ? ` (${task.assignedCompany.name})` : ''}`
         : task.approverType === 'COMPANY'

@@ -7,15 +7,15 @@ type CompanyOpt = { id: string; name: string; isHost: boolean; teams: string[] }
 type UserOpt = { id: string; name: string; companyId: string; companyName: string; team: string | null };
 
 /**
- * 완료 승인자 지정 — 담당 지정과 동일한 "승인 업체 → 승인 팀 → 승인 담당자" 3단 구조.
- * 역할 기반(캠스 관리자/회사 관리자) 방식은 보조 옵션으로 유지.
+ * 완료 승인자 지정 — "승인 업체 → 승인 팀 → 승인 담당자" 또는 "승인 불필요".
+ * 담당자가 아직 지정되지 않은 과제(기존 역할 기반 저장 포함)는 캠스 관리자가
+ * 백업으로 승인할 수 있다.
  */
 export function ApproverSelector({
   taskId,
   companies,
   users,
   currentType,
-  currentCompanyId,
   currentUserId,
   currentLabel,
 }: {
@@ -23,19 +23,18 @@ export function ApproverSelector({
   companies: CompanyOpt[];
   users: UserOpt[];
   currentType: string;
-  currentCompanyId: string | null;
+  currentCompanyId?: string | null;
   currentUserId: string | null;
   currentLabel: string;
 }) {
   const currentUser = users.find((u) => u.id === currentUserId);
-  const [type, setType] = useState(currentType);
-  const [companyId, setCompanyId] = useState(currentUser?.companyId ?? currentCompanyId ?? '');
+  const [type, setType] = useState(currentType === 'NONE' ? 'NONE' : 'USER');
+  const [companyId, setCompanyId] = useState(currentUser?.companyId ?? '');
   const [team, setTeam] = useState(currentUser?.team ?? '');
   const [userId, setUserId] = useState(currentUserId ?? '');
   const [err, setErr] = useState('');
 
   const needUser = type === 'USER';
-  const needCompany = type === 'COMPANY';
 
   const company = companies.find((c) => c.id === companyId);
   const companyUsers = companyId ? users.filter((u) => u.companyId === companyId) : users;
@@ -60,16 +59,10 @@ export function ApproverSelector({
           setErr('승인 업체와 팀을 고른 뒤 승인 담당자를 선택하고 변경을 누르세요.');
           return;
         }
-        if (needCompany && !companyId) {
-          e.preventDefault();
-          setErr('승인을 담당할 업체를 선택한 뒤 변경을 누르세요.');
-          return;
-        }
         setErr('');
       }}
     >
       <input type="hidden" name="taskId" value={taskId} />
-      {needCompany && <input type="hidden" name="approverCompanyId" value={companyId} />}
       <div className="row" style={{ marginBottom: 6 }}>
         <select
           name="approverType"
@@ -81,9 +74,6 @@ export function ApproverSelector({
           style={{ flex: 1 }}
         >
           <option value="USER">지정 담당자 승인 (업체 → 팀 → 담당자)</option>
-          <option value="COMPANY">지정 업체의 회사 관리자 승인</option>
-          <option value="COMPANY_ADMIN">담당 업체의 회사 관리자 승인</option>
-          <option value="HOST_ADMIN">캠스 관리자(시스템 관리자) 승인</option>
           <option value="NONE">승인 불필요 (즉시 완료)</option>
         </select>
         <button className="btn sm secondary" type="submit">
@@ -91,27 +81,27 @@ export function ApproverSelector({
         </button>
       </div>
 
-      {(needUser || needCompany) && (
-        <div className="row" style={{ marginBottom: 6 }}>
-          <select
-            value={companyId}
-            onChange={(e) => {
-              setCompanyId(e.target.value);
-              setTeam('');
-              setUserId('');
-              setErr('');
-            }}
-            style={{ flex: 1 }}
-          >
-            <option value="">{needUser ? '승인 업체 (전체 보기)' : '-- 승인 업체 선택 --'}</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.isHost ? ' (캠스)' : ''}
-              </option>
-            ))}
-          </select>
-          {needUser && (
+      {needUser && (
+        <>
+          <div className="row" style={{ marginBottom: 6 }}>
+            <select
+              value={companyId}
+              onChange={(e) => {
+                setCompanyId(e.target.value);
+                setTeam('');
+                setUserId('');
+                setErr('');
+              }}
+              style={{ flex: 1 }}
+            >
+              <option value="">승인 업체 (전체 보기)</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.isHost ? ' (캠스)' : ''}
+                </option>
+              ))}
+            </select>
             <select
               value={team}
               onChange={(e) => {
@@ -129,40 +119,38 @@ export function ApproverSelector({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="row" style={{ marginBottom: 6 }}>
+            <select
+              name="approverUserId"
+              value={userId}
+              onChange={(e) => {
+                setUserId(e.target.value);
+                setErr('');
+              }}
+              style={{ flex: 1 }}
+            >
+              <option value="">-- 승인 담당자 선택 --</option>
+              {filteredUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                  {u.team ? ` (${u.team})` : ''}
+                  {companyId ? '' : ` — ${u.companyName}`}
+                </option>
+              ))}
+            </select>
+          </div>
+          {fallbackToAll && (
+            <div className="muted" style={{ marginBottom: 6 }}>
+              이 팀에 등록된 사용자가 없어 회사 전체 명단을 표시합니다.
+            </div>
           )}
-        </div>
-      )}
-      {needUser && (
-        <div className="row" style={{ marginBottom: 6 }}>
-          <select
-            name="approverUserId"
-            value={userId}
-            onChange={(e) => {
-              setUserId(e.target.value);
-              setErr('');
-            }}
-            style={{ flex: 1 }}
-          >
-            <option value="">-- 승인 담당자 선택 --</option>
-            {filteredUsers.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-                {u.team ? ` (${u.team})` : ''}
-                {companyId ? '' : ` — ${u.companyName}`}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      {needUser && fallbackToAll && (
-        <div className="muted" style={{ marginBottom: 6 }}>
-          이 팀에 등록된 사용자가 없어 회사 전체 명단을 표시합니다.
-        </div>
-      )}
-      {needUser && companyId && companyUsers.length === 0 && (
-        <div className="muted" style={{ marginBottom: 6 }}>
-          이 업체에 등록된 사용자가 없습니다. 관리 화면에서 사용자를 사전 등록하세요.
-        </div>
+          {companyId && companyUsers.length === 0 && (
+            <div className="muted" style={{ marginBottom: 6 }}>
+              이 업체에 등록된 사용자가 없습니다. 관리 화면에서 사용자를 사전 등록하세요.
+            </div>
+          )}
+        </>
       )}
 
       {err && (

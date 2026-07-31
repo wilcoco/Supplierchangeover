@@ -435,13 +435,12 @@ export function FlowEditor({
                       onChange={(e) => patchSelNode({ approverType: e.target.value })}
                       disabled={readOnly}
                     >
-                      <option value="HOST_ADMIN">캠스 관리자</option>
-                      <option value="COMPANY_ADMIN">담당 업체 회사 관리자</option>
+                      <option value="HOST_ADMIN">승인 필요 (승인 담당자는 프로젝트에서 지정)</option>
                       <option value="NONE">승인 불필요 (즉시 완료)</option>
                     </select>
                     <span className="muted">
-                      특정 회사·사용자를 승인자로 지정(교차 승인)하는 것은 프로젝트 생성 후 과제
-                      화면에서 설정합니다.
+                      승인 담당자(업체 → 팀 → 담당자)는 프로젝트 생성 후 과제 화면에서 지정합니다.
+                      지정 전에는 캠스 관리자가 승인합니다.
                     </span>
                   </label>
                 </>
